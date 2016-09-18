@@ -620,24 +620,26 @@
                         }
                     }
                 }
-            } else {
-                if (hasModeO(username)) {
-                    var newmodeOUsers = [];
-
-                    for (i in modeOUsers) {
-                        if (!modeOUsers[i][0].equalsIgnoreCase(username)) {
-                            newmodeOUsers.push([modeOUsers[i][0], modeOUsers[i][1]]);
-                        }
-                    }
-
-                    modeOUsers = newmodeOUsers;
-
-                    if (isSub(username)) {
-                        $.inidb.set('group', username, '3'); // Subscriber, return to that group.
-                    } else {
-                        $.inidb.set('group', username, '6'); // Assume user that was a mod was a regular.
-                    }
-                }
+                
+                // We keep our mods
+            } else {                
+                //if (hasModeO(username)) {
+                //    var newmodeOUsers = [];
+                //
+                //    for (i in modeOUsers) {
+                //        if (!modeOUsers[i][0].equalsIgnoreCase(username)) {
+                //            newmodeOUsers.push([modeOUsers[i][0], modeOUsers[i][1]]);
+                //        }
+                //    }
+                //
+                //    modeOUsers = newmodeOUsers;
+                //
+                //    if (isSub(username)) {
+                //        $.inidb.set('group', username, '3'); // Subscriber, return to that group.
+                //    } else {
+                //        $.inidb.set('group', username, '6'); // Assume user that was a mod was a regular.
+                //    }
+                //}
             }
         }
     });
@@ -659,10 +661,12 @@
                 spl = message.replace(modMessageStart, '').split(', ');
                 modListUsers = [];
 
+                // Keep mods
                 for (i in keys) {
-                    if ($.inidb.get('group', keys[i]).equalsIgnoreCase('2')) {
-                        $.inidb.del('group', keys[i]);
-                    }
+                   if ($.inidb.get('group', keys[i]).equalsIgnoreCase('2')) {
+                       //$.inidb.del('group', keys[i]);
+                       modListUsers.push(i);
+                   }
                 }
 
                 for (i in spl) {
