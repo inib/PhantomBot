@@ -461,7 +461,7 @@
         }
 
         for (i in groups) {
-            temp.push('Group ID: ' + groups[i].id + ' (' + groups[i].group + ')');
+            temp.push('Permission IDs: ' + groups[i].id + ' (' + groups[i].group + ')');
         }
         return temp.join(', ');
     };
@@ -745,7 +745,7 @@
                 return;
             }
 
-            if (username !== undefined && $.user.isKnown(username.toLowerCase())) {
+            if (username !== undefined && (isNaN(groupId) || groupId === undefined) && $.user.isKnown(username.toLowerCase())) {
                 $.say($.whisperPrefix(sender) + $.lang.get('permissions.group.other.current', $.username.resolve(args[0]), $.getUserGroupName(args[0])));
                 return;
             }
