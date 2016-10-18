@@ -221,6 +221,7 @@ public class PhantomBot implements Listener {
 	public static Boolean wsIRCAlternateBurst = false;
 	private static Boolean newSetup = false;
 	private Boolean devCommands = true;
+	private Boolean joined = false;
 
 
     /** 
@@ -382,7 +383,7 @@ public class PhantomBot implements Listener {
 		this.mySqlPort = mySqlPort;
 
 		/** twitch cache */
-		this.twitchCacheReady = "false";
+		PhantomBot.twitchCacheReady = "false";
 
 		/** Set the SSL info */
 		this.httpsFileName = httpsFileName;
@@ -390,9 +391,9 @@ public class PhantomBot implements Listener {
 
 		/** Set the timeZone */
 		if (!timeZone.isEmpty()) {
-			this.timeZone = timeZone;
+			PhantomBot.timeZone = timeZone;
 		} else {
-			this.timeZone = "GMT";
+			PhantomBot.timeZone = "GMT";
 		}
 
 		/** Set the panel username login for the panel to use */
@@ -417,16 +418,16 @@ public class PhantomBot implements Listener {
 
 		/** Set the message limit for session.java to use */
 		if (messageLimit != 0) {
-			this.messageLimit = messageLimit;
+			PhantomBot.messageLimit = messageLimit;
 		} else {
-			this.messageLimit = 18.75;
+			PhantomBot.messageLimit = 18.75;
 		}
 
 		/** Set the whisper limit for session.java to use. *Currently not used.* */
 		if (whisperLimit != 0) {
-			this.whisperLimit = 60.0;
+			PhantomBot.whisperLimit = 60.0;
 		} else {
-			this.whisperLimit = 60.0;
+			PhantomBot.whisperLimit = 60.0;
 		}
 
 		/** Set the client id for the twitch api to use */
@@ -723,7 +724,7 @@ public class PhantomBot implements Listener {
     	}
 
     	/** Enable gamewhisp if the oAuth is set */
-    	if (!gameWispOAuth.isEmpty()) {
+    	if (!gameWispOAuth.isEmpty() && dataStore.GetString("modules", "", "./handlers/gameWispHandler.js").equals("true")){
     		/** Set the oAuths */
     		GameWispAPIv1.instance().SetAccessToken(gameWispOAuth);
             GameWispAPIv1.instance().SetRefreshToken(gameWispRefresh);
@@ -890,7 +891,7 @@ public class PhantomBot implements Listener {
         Script.global.defineProperty("shortenURL", GoogleURLShortenerAPIv1.instance(), 0);
         Script.global.defineProperty("gamewisp", GameWispAPIv1.instance(), 0);
         Script.global.defineProperty("twitter", TwitterAPI.instance(), 0);
-        Script.global.defineProperty("twitchCacheReady", this.twitchCacheReady, 0);
+        Script.global.defineProperty("twitchCacheReady", PhantomBot.twitchCacheReady, 0);
         Script.global.defineProperty("isNightly", isNightly(), 0);
         Script.global.defineProperty("version", botVersion(), 0);
         Script.global.defineProperty("changed", Boolean.valueOf(newSetup), 0);
@@ -939,7 +940,7 @@ public class PhantomBot implements Listener {
     	FollowersCache.killall();
     	print("Terminating the Twitch channel subscriber cache...");
     	SubscribersCache.killall();
-    	print("Terminating the TwitchAlerts cache...");
+    	print("Terminating the Streamlabs cache...");
     	DonationsCache.killall();
     	print("Terminating the StreamTip cache...");
     	StreamTipCache.killall();
@@ -987,14 +988,21 @@ public class PhantomBot implements Listener {
      */
     @Subscribe
     public void ircJoinComplete(IrcJoinCompleteEvent event) {
+    	/* Check if the bot already joined once. */
+    	if (joined) {
+    		return;
+    	}
+
+    	joined = true;
+
     	this.chanName = event.getChannel().getName();
     	this.session = event.getSession();
 
     	//print("ircJoinComplete::" + this.chanName);
 
     	/** Add the channel/session in the array for later use */
-    	PhantomBot.instance().addChannel(this.chanName, event.getChannel());
-    	PhantomBot.instance().addSession(this.chanName, this.session);
+    	PhantomBot.addChannel(this.chanName, event.getChannel());
+    	PhantomBot.addSession(this.chanName, this.session);
 
     	/** Say .mods in the channel to check if the bot is a moderator */
     	this.session.saySilent(".mods");
@@ -1009,18 +1017,18 @@ public class PhantomBot implements Listener {
         this.twitchCache = TwitchCache.instance(this.chanName);// This does not create a new instance for multiple channels. Not sure why.
         this.channelUsersCache = ChannelUsersCache.instance(this.chanName);
 
-        /** Start the donations cache if the keys are not null */
-        if (this.twitchAlertsKey != null && !this.twitchAlertsKey.isEmpty()) {
+        /** Start the donations cache if the keys are not null and the module is enabled */
+        if (this.twitchAlertsKey != null && !this.twitchAlertsKey.isEmpty() && PhantomBot.instance().getDataStore().GetString("modules", "", "./handlers/donationHandler.js").equals("true")) {
         	this.twitchAlertsCache = DonationsCache.instance(this.chanName);
         }
 
-        /** Start the streamtip cache if the keys are not null */
-        if (this.streamTipOAuth != null && !this.streamTipOAuth.isEmpty()) {
+        /** Start the streamtip cache if the keys are not null and the module is enabled */
+        if (this.streamTipOAuth != null && !this.streamTipOAuth.isEmpty() && PhantomBot.instance().getDataStore().GetString("modules", "", "./handlers/streamTipHandler.js").equals("true")) {
         	this.streamTipCache = StreamTipCache.instance(this.chanName);
         }
 
-        /** Start the twitter cache if the keys are not null */
-        if (this.twitterAuthenticated) {
+        /** Start the twitter cache if the keys are not null and the module is enabled */
+        if (this.twitterAuthenticated && PhantomBot.instance().getDataStore().GetString("modules", "", "./handlers/twitterHandler.js").equals("true")) {
         	this.twitterCache = TwitterCache.instance(this.chanName);
         }
 
@@ -2713,8 +2721,8 @@ public class PhantomBot implements Listener {
 
     /** Set the twitch cache */
     public void setTwitchCacheReady(String twitchCacheReady) {
-        this.twitchCacheReady = twitchCacheReady;
-        Script.global.defineProperty("twitchCacheReady", this.twitchCacheReady, 0);
+        PhantomBot.twitchCacheReady = twitchCacheReady;
+        Script.global.defineProperty("twitchCacheReady", PhantomBot.twitchCacheReady, 0);
     }
 
     /** Load the game list */
