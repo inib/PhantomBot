@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
@@ -25,22 +25,28 @@
  */
 (function() {
 
-   var refreshIcon = '<i class="fa fa-refresh" />',
-       spinIcon = '<i style="color: #6136b1" class="fa fa-spinner fa-spin" />',
-       settingIcon = [];
-       settingIcon['false'] = '<i style="color: #6136b1" class="fa fa-circle-o" />';
-       settingIcon['true'] = '<i style="color: #6136b1" class="fa fa-circle" />';
+    var refreshIcon = '<i class="fa fa-refresh" />',
+        spinIcon = '<i style="color: var(--main-color)" class="fa fa-spinner fa-spin" />',
+        settingIcon = [];
+        settingIcon['false'] = '<i style="color: var(--main-color)" class="fa fa-circle-o" />';
+        settingIcon['true'] = '<i style="color: var(--main-color)" class="fa fa-circle" />';
 
     var greetingToggle = false,
         followerToggle = false,
         subToggle = false,
         reSubToggle = false,
+        subGiftToggle = false,
+        massSubGiftToggle = false,
         donationToggle = false,
-        streamtipdonationToggle = false,
-        donationGroup = false,  
-        streamtipdonationGroup = false,         
+        donationGroup = false,
         gameWhispToggle = false,
-        bitsToggle = false;
+        primeSubToggle = false,
+        bitsToggle = false,
+        bitsRewardMultToggle = false,
+        tipeeestreamdonationToggle = false,
+        tipeeestreamdonationGroup = false,
+        streamelementsdonationToggle = false,
+        streamelementsdonationGroup = false;
 
     /*
      * onMessage
@@ -58,7 +64,7 @@
         if (panelHasQuery(msgObject)) {
             var key = "",
                 value = "";
-     
+
             if (panelCheckQuery(msgObject, 'greetings_greeting')) {
                 for (idx in msgObject['results']) {
                     key = msgObject['results'][idx]['key'];
@@ -67,9 +73,6 @@
                     if (panelMatch(key, 'autoGreetEnabled')) {
                         greetingToggle = value;
                         $('#globalGreetings').html(settingIcon[value]);
-                    }
-                    if (panelMatch(key, 'defaultJoin')) {
-                        $('#greetingDefaultInput').val(value);
                     }
                     if (panelMatch(key, 'cooldown')) {
                         $('#greetingCooldownInput').val((value / 36e5));
@@ -116,36 +119,55 @@
                     if (panelMatch(key, 'message')) {
                         $('#donateGreetingInput').val(value);
                     }
-                    if (panelMatch(key, 'lastmessage')) {
-                        $('#donateLastMsgInput').val(value);
-                    }
                 }
             }
 
-            if (panelCheckQuery(msgObject, 'greetings_donationstreamtip')) {
+            if (panelCheckQuery(msgObject, 'greetings_tipeeestream')) {
                 for (idx in msgObject['results']) {
                     key = msgObject['results'][idx]['key'];
                     value = msgObject['results'][idx]['value'];
 
-                    if (panelMatch(key, 'announce')) {
-                        streamtipdonationToggle = value;
-                        $('#streamtipGreetings').html(settingIcon[value]);
+                    if (panelMatch(key, 'toggle')) {
+                        tipeeestreamdonationToggle = value;
+                        $('#tipeeestreamGreetings').html(settingIcon[value]);
                     }
-                    if (panelMatch(key, 'donationGroup')) {
-                        streamtipdonationGroup = value;
-                        $('#streamtipdonationGroup').html(settingIcon[value]);
+                    if (panelMatch(key, 'group')) {
+                        tipeeestreamdonationGroup = value;
+                        $('#tipeeestreamdonationGroup').html(settingIcon[value]);
                     }
-                    if (panelMatch(key, 'donationGroupMin')) {
-                        $('#streamtipdonationGroupMin').val(value);
+                    if (panelMatch(key, 'groupMin')) {
+                        $('#tipeeestreamdonationGroupMin').val(value);
                     }
                     if (panelMatch(key, 'reward')) {
-                        $('#streamtipdonateRewardInput').val(value);
+                        $('#tipeeestreamdonateRewardInput').val(value);
                     }
                     if (panelMatch(key, 'message')) {
-                        $('#streamtipdonateGreetingInput').val(value);
+                        $('#tipeeestreamdonateGreetingInput').val(value);
                     }
-                    if (panelMatch(key, 'lastmessage')) {
-                        $('#streamtipdonateLastMsgInput').val(value);
+                }
+            }
+
+            if (panelCheckQuery(msgObject, 'greetings_streamelements')) {
+                for (idx in msgObject['results']) {
+                    key = msgObject['results'][idx]['key'];
+                    value = msgObject['results'][idx]['value'];
+
+                    if (panelMatch(key, 'toggle')) {
+                        streamelementsdonationToggle = value;
+                        $('#streamelementsGreetings').html(settingIcon[value]);
+                    }
+                    if (panelMatch(key, 'group')) {
+                        streamelementsdonationGroup = value;
+                        $('#streamelementsdonationGroup').html(settingIcon[value]);
+                    }
+                    if (panelMatch(key, 'groupMin')) {
+                        $('#streamelementsdonationGroupMin').val(value);
+                    }
+                    if (panelMatch(key, 'reward')) {
+                        $('#streamelementsdonateRewardInput').val(value);
+                    }
+                    if (panelMatch(key, 'message')) {
+                        $('#streamelementsdonateGreetingInput').val(value);
                     }
                 }
             }
@@ -158,47 +180,63 @@
                     if (panelMatch(key, 'subscribeMessage')) {
                         $('#subGreetingInput').val(value);
                     }
+                    if (panelMatch(key, 'primeSubscribeMessage')) {
+                        $('#primeSubGreetingInput').val(value);
+                    }
+                    if (panelMatch(key, 'reSubscribeReward')) {
+                        $('#reSubRewardInput').val(value);
+                    }
+                    if (panelMatch(key, 'giftSubReward')) {
+                        $('#giftSubRewardInput').val(value);
+                    }
+                    if (panelMatch(key, 'massGiftSubReward')) {
+                        $('#massGiftSubRewardInput').val(value);
+                    }
                     if (panelMatch(key, 'reSubscribeMessage')) {
                         $('#resubGreetingInput').val(value);
+                    }
+                    if (panelMatch(key, 'giftSubMessage')) {
+                        $('#giftsubGreetingInput').val(value);
+                    }
+                    if (panelMatch(key, 'massGiftSubMessage')) {
+                        $('#massGiftsubGreetingInput').val(value);
                     }
                     if (panelMatch(key, 'subscriberWelcomeToggle')) {
                         subToggle = value;
                         $('#subscriptionGreetings').html(settingIcon[value]);
                     }
+                    if (panelMatch(key, 'primeSubscriberWelcomeToggle')) {
+                        primeSubToggle = value;
+                        $('#primeSubscriptionGreetings').html(settingIcon[value]);
+                    }
                     if (panelMatch(key, 'reSubscriberWelcomeToggle')) {
                         reSubToggle = value;
                         $('#resubscriptionGreetings').html(settingIcon[value]);
                     }
+                    if (panelMatch(key, 'giftSubWelcomeToggle')) {
+                        subGiftToggle = value;
+                        $('#subscriptiongiftGreetings').html(settingIcon[value]);
+                    }
+                    if (panelMatch(key, 'massGiftSubWelcomeToggle')) {
+                        massSubGiftToggle = value;
+                        $('#masssubscriptiongiftGreetings').html(settingIcon[value]);
+                    }
                     if (panelMatch(key, 'subscribeReward')) {
                         $('#subRewardInput').val(value);
                     }
-                }
-            }
+                    if (panelMatch(key, 'resubEmote')) {
+                        $('#resubEmoteInput').val(value);
+                    }
+                    if (panelMatch(key, 'subPlan1000')) {
+                        $('#subPlan1000Input').val(value);
+                    }
+                    if (panelMatch(key, 'subPlan2000')) {
+                        $('#subPlan2000Input').val(value);
+                    }
+                    if (panelMatch(key, 'subPlan3000')) {
+                        $('#subPlan3000Input').val(value);
+                    }
 
-            if (panelCheckQuery(msgObject, 'greetings_gamewisp')) {
-                for (idx in msgObject['results']) {
-                    key = msgObject['results'][idx]['key'];
-                    value = msgObject['results'][idx]['value'];
-
-                    if (panelMatch(key, 'subscriberShowMessages')) {
-                        gameWhispToggle = value;
-                        $('#gameWispGreetings').html(settingIcon[value]);
-                    }
-                    if (panelMatch(key, 'subscribeMessage')) {
-                        $('#gwSubGreetingInput').val(value);
-                    }
-                    if (panelMatch(key, 'reSubscribeMessage')) {
-                        $('#gwResubGreetingInput').val(value);
-                    }
-                    if (panelMatch(key, 'tierUpMessage')) {
-                        $('#gwTierupGreetingInput').val(value);
-                    }
-                    if (panelMatch(key, 'subscribeReward')) {
-                        $('#gwSubRewardInput').val(value);
-                    }
-                    if (panelMatch(key, 'reSubscribeReward')) {
-                        $('#gwResubRewardInput').val(value);
-                    }
                 }
             }
 
@@ -214,46 +252,10 @@
                     if (panelMatch(key, 'message')) {
                         $('#bitsMessage').val(value);
                     }
-                    if (panelMatch(key, 'reward')) {
-                        $('#bitsReward').val(value);
-                    }
                     if (panelMatch(key, 'minimum')) {
                         $('#bitsMinimum').val(value);
                     }
                 }
-            }
-
-            if (panelCheckQuery(msgObject, 'greetings_gamewispTiers')) {
-                var tier = "",
-                    html = "",
-                    songRequestHtml = "<table>",
-                    bonusPointsHtml = "<table>",
-                    subBonusPointsHtml = "<table>";
- 
-                for (idx in msgObject['results']) {
-                    key = msgObject['results'][idx]['key'];
-                    value = msgObject['results'][idx]['value'];
-                    tier = key[key.indexOf('_') + 1];
-                    html = '<tr class="textList">' +
-                           '    <td>Tier ' + tier + '</td>' +
-                           '    <td style="vertical-align: middle">' +
-                           '        <input type="number" min="0" id="inline_' + key + '"' +
-                           '               placeholder="' + value + '" value="' + value + '"' +
-                           '               style="width: 8em" />' +
-                           '        <button type="button" class="btn btn-default btn-xs"' +
-                           '                onclick="$.updateGWTierData(\'' + key + '\')"><i class="fa fa-pencil" />' +
-                           '        </button>' +
-                           '    </td>' +
-                           '</tr>';
-                    if (key.startsWith('songrequest_') === true) { songRequestHtml += html; }
-                    if (key.startsWith('bonuspoints_') === true) { bonusPointsHtml += html; }
-                    if (key.startsWith('subbonuspoints_') === true) { subBonusPointsHtml += html; }
-                }
-
-                $('#gameWispSongRequests').html(songRequestHtml);
-                $('#gameWispBonusPoints').html(bonusPointsHtml);
-                $('#gameWispSubBonusPoints').html(subBonusPointsHtml);
-                handleInputFocus();
             }
         }
     }
@@ -268,24 +270,10 @@
         sendDBQuery('greetings_followToggle', 'settings', 'followToggle');
         sendDBQuery('greetings_followDelay', 'settings', 'followDelay');
         sendDBKeys('greetings_donation', 'donations');
-        sendDBKeys('greetings_donationstreamtip', 'streamtip');
         sendDBKeys('greetings_subscribers', 'subscribeHandler');
-        sendDBKeys('greetings_gamewisp', 'gameWispSubHandler');
-        sendDBKeys('greetings_gamewispTiers', 'gameWispTiers');
         sendDBKeys('greetings_bits', 'bitsSettings');
-    }
-
-    /**
-     * @function updateGWTierData
-     * @param {String} key
-     */
-    function updateGWTierData(key) {
-        var value = $('#inline_' + key).val();
-
-        if (value.length > 0) {
-            sendDBUpdate('greetings_updateTier', 'gameWispTiers', key, value);
-            setTimeout(function() { sendCommand('gamewisppanelupdate'); doQuery(); }, TIMEOUT_WAIT_TIME);
-        }
+        sendDBKeys('greetings_tipeeestream', 'tipeeeStreamHandler');
+        sendDBKeys('greetings_streamelements', 'streamElementsHandler');
     }
 
     /**
@@ -298,101 +286,137 @@
             $('#globalGreetings').html(spinIcon);
             if (greetingToggle == "true") {
                 sendDBUpdate('greetings_greeting', 'greeting', 'autoGreetEnabled', 'false');
-                sendCommand('greetingspanelupdate');
             } else {
                 sendDBUpdate('greetings_greeting', 'greeting', 'autoGreetEnabled', 'true');
-                sendCommand('greetingspanelupdate');
             }
+            setTimeout(function() { sendCommand('greetingspanelupdate'); }, TIMEOUT_WAIT_TIME);
         }
         if (panelMatch(table, 'settings')) { // Confusing? Follow is in the settings table.
             $('#followerGreetings').html(spinIcon);
             if (followToggle == "true") {
                 sendDBUpdate('greetings_greeting', 'settings', 'followToggle', 'false');
-                sendCommand('followerpanelupdate');
             } else {
                 sendDBUpdate('greetings_greeting', 'settings', 'followToggle', 'true');
-                sendCommand('followerpanelupdate');
             }
+            setTimeout(function() { sendCommand('followerpanelupdate'); }, TIMEOUT_WAIT_TIME);
         }
         if (panelMatch(table, 'donations')) {
             $('#donationGreetings').html(spinIcon);
             if (donationToggle == "true") {
                 sendDBUpdate('greetings_greeting', 'donations', 'announce', 'false');
-                sendCommand('donationpanelupdate');
             } else {
                 sendDBUpdate('greetings_greeting', 'donations', 'announce', 'true');
-                sendCommand('donationpanelupdate');
             }
+            setTimeout(function() { sendCommand('donationpanelupdate'); }, TIMEOUT_WAIT_TIME);
         }
-        if (panelMatch(table, 'streamtip')) {
-            $('#streamtipGreetings').html(spinIcon);
-            if (streamtipdonationToggle == "true") {
-                sendDBUpdate('greetings_greeting', 'streamtip', 'announce', 'false');
-                sendCommand('donationpanelupdatestreamtip');
+
+        if (panelMatch(table, 'tipeeestream')) {
+            $('#tipeeestreamGreetings').html(spinIcon);
+            if (tipeeestreamdonationToggle == "true") {
+                sendDBUpdate('greetings_greeting', 'tipeeeStreamHandler', 'toggle', 'false');
             } else {
-                sendDBUpdate('greetings_greeting', 'streamtip', 'announce', 'true');
-                sendCommand('donationpanelupdatestreamtip');
-            } 
+                sendDBUpdate('greetings_greeting', 'tipeeeStreamHandler', 'toggle', 'true');
+            }
+            setTimeout(function() { sendCommand('tipeeestreamreload'); }, TIMEOUT_WAIT_TIME);
+        }
+        if (panelMatch(table, 'streamelements')) {
+            $('#streamelementsGreetings').html(spinIcon);
+            if (streamelementsdonationToggle == "true") {
+                sendDBUpdate('greetings_greeting', 'streamElementsHandler', 'toggle', 'false');
+            } else {
+                sendDBUpdate('greetings_greeting', 'streamElementsHandler', 'toggle', 'true');
+            }
+            setTimeout(function() { sendCommand('streamelementsreload'); }, TIMEOUT_WAIT_TIME);
         }
         if (panelMatch(table, 'donationGroup')) {
             $('#donationGroup').html(spinIcon);
             if (donationGroup == "true") {
                 sendDBUpdate('greetings_greeting', 'donations', 'donationGroup', 'false');
-                sendCommand('donationpanelupdate');
             } else {
                 sendDBUpdate('greetings_greeting', 'donations', 'donationGroup', 'true');
-                sendCommand('donationpanelupdate');
             }
+            setTimeout(function() { sendCommand('donationpanelupdate'); }, TIMEOUT_WAIT_TIME);
         }
-        if (panelMatch(table, 'streamtipdonationGroup')) {
-            $('#streamtipdonationGroup').html(spinIcon);
-            if (streamtipdonationGroup == "true") {
-                sendDBUpdate('greetings_greeting', 'streamtip', 'donationGroup', 'false');
-                sendCommand('donationpanelupdatestreamtip');
+        if (panelMatch(table, 'tipeeestreamdonationGroup')) {
+            $('#tipeeestreamdonationGroup').html(spinIcon);
+            if (tipeeestreamdonationGroup == "true") {
+                sendDBUpdate('greetings_greeting', 'tipeeeStreamHandler', 'group', 'false');
             } else {
-                sendDBUpdate('greetings_greeting', 'streamtip', 'donationGroup', 'true');
-                sendCommand('donationpanelupdatestreamtip');
+                sendDBUpdate('greetings_greeting', 'tipeeeStreamHandler', 'group', 'true');
             }
+            setTimeout(function() { sendCommand('tipeeestreamreload'); }, TIMEOUT_WAIT_TIME);
         }
-        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'subscriberWelcomeToggle')) { 
+        if (panelMatch(table, 'streamelementsdonationGroup')) {
+            $('#streamelementsdonationGroup').html(spinIcon);
+            if (streamelementsdonationGroup == "true") {
+                sendDBUpdate('greetings_greeting', 'streamElementsHandler', 'group', 'false');
+            } else {
+                sendDBUpdate('greetings_greeting', 'streamElementsHandler', 'group', 'true');
+            }
+            setTimeout(function() { sendCommand('streamelementsreload'); }, TIMEOUT_WAIT_TIME);
+        }
+        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'subscriberWelcomeToggle')) {
             $('#subscriptionGreetings').html(spinIcon);
             if (subToggle == "true") {
                 sendDBUpdate('greetings_greeting', 'subscribeHandler', 'subscriberWelcomeToggle', 'false');
-                sendCommand('subscriberpanelupdate');
             } else {
                 sendDBUpdate('greetings_greeting', 'subscribeHandler', 'subscriberWelcomeToggle', 'true');
-                sendCommand('subscriberpanelupdate');
             }
+            setTimeout(function() { sendCommand('subscriberpanelupdate'); }, TIMEOUT_WAIT_TIME);
         }
-        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'reSubscriberWelcomeToggle')) { 
+        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'primeSubscriberWelcomeToggle')) {
+            $('#primeSubscriptionGreetings').html(spinIcon);
+            if (primeSubToggle == "true") {
+                sendDBUpdate('greetings_greeting', 'subscribeHandler', 'primeSubscriberWelcomeToggle', 'false');
+            } else {
+                sendDBUpdate('greetings_greeting', 'subscribeHandler', 'primeSubscriberWelcomeToggle', 'true');
+            }
+            setTimeout(function() { sendCommand('subscriberpanelupdate'); }, TIMEOUT_WAIT_TIME);
+        }
+        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'reSubscriberWelcomeToggle')) {
             $('#resubscriptionGreetings').html(spinIcon);
             if (reSubToggle == "true") {
                 sendDBUpdate('greetings_greeting', 'subscribeHandler', 'reSubscriberWelcomeToggle', 'false');
-                sendCommand('subscriberpanelupdate');
             } else {
                 sendDBUpdate('greetings_greeting', 'subscribeHandler', 'reSubscriberWelcomeToggle', 'true');
-                sendCommand('subscriberpanelupdate');
             }
+            setTimeout(function() { sendCommand('subscriberpanelupdate'); }, TIMEOUT_WAIT_TIME);
         }
-        if (panelMatch(table, 'bitsSettings') && panelMatch(key, 'toggle')) { 
+        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'giftSubWelcomeToggle')) {
+            $('#subscriptiongiftGreetings').html(spinIcon);
+            if (subGiftToggle == "true") {
+                sendDBUpdate('greetings_greeting', 'subscribeHandler', 'giftSubWelcomeToggle', 'false');
+            } else {
+                sendDBUpdate('greetings_greeting', 'subscribeHandler', 'giftSubWelcomeToggle', 'true');
+            }
+            setTimeout(function() { sendCommand('subscriberpanelupdate'); }, TIMEOUT_WAIT_TIME);
+        }
+        if (panelMatch(table, 'subscribeHandler') && panelMatch(key, 'massGiftSubWelcomeToggle')) {
+            $('#masssubscriptiongiftGreetings').html(spinIcon);
+            if (massSubGiftToggle == "true") {
+                sendDBUpdate('greetings_greeting', 'subscribeHandler', 'massGiftSubWelcomeToggle', 'false');
+            } else {
+                sendDBUpdate('greetings_greeting', 'subscribeHandler', 'massGiftSubWelcomeToggle', 'true');
+            }
+            setTimeout(function() { sendCommand('subscriberpanelupdate'); }, TIMEOUT_WAIT_TIME);
+        }
+        if (panelMatch(table, 'bitsSettings') && panelMatch(key, 'toggle')) {
             $('#bitsToggle').html(spinIcon);
             if (bitsToggle == "true") {
                 sendDBUpdate('greetings_bits', 'bitsSettings', 'toggle', 'false');
-                sendCommand('reloadbits');
             } else {
                 sendDBUpdate('greetings_bits', 'bitsSettings', 'toggle', 'true');
-                sendCommand('reloadbits');
             }
+            setTimeout(function() { sendCommand('reloadbits'); }, TIMEOUT_WAIT_TIME);
         }
-        if (panelMatch(table, 'gameWispSubHandler')) { 
-            $('#gameWispGreetings').html(spinIcon);
-            if (gameWhispToggle == "true") {
-                sendDBUpdate('greetings_greeting', 'gameWispSubHandler', 'subscriberShowMessages', 'false');
-                sendCommand('gamewisppanelupdate');
+        if (panelMatch(table, 'bitsSettings') && panelMatch(key, 'rewardMultToggle')) {
+            $('#bitsRewardMultToggle').html(spinIcon);
+            if (bitsRewardMultToggle == "true") {
+                sendDBUpdate('greetings_bits', 'bitsSettings', 'rewardMultToggle', 'false');
             } else {
-                sendDBUpdate('greetings_greeting', 'gameWispSubHandler', 'subscriberShowMessages', 'true');
-                sendCommand('gamewisppanelupdate');
+                sendDBUpdate('greetings_bits', 'bitsSettings', 'rewardMultToggle', 'true');
             }
+            setTimeout(function() { sendCommand('reloadbits'); }, TIMEOUT_WAIT_TIME);
         }
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     }
@@ -415,6 +439,15 @@
             }
         }
 
+        if (key == 'followDelay') {
+            if (parseInt(value) < 5) {
+                document.getElementById(inputId).type = 'text';
+                $('#' + inputId).val('Follow delay cannot be less than 5 seconds!');
+                setTimeout(function() { doQuery(); document.getElementById(inputId).type = 'number'; }, TIMEOUT_WAIT_TIME * 4);
+                return;
+            }
+        }
+
         if (value.length > 0) {
             sendDBUpdate('greetings_update', table, key, value);
 
@@ -427,20 +460,20 @@
             if (panelMatch(table, 'donations')) {
                 sendCommand('donationpanelupdate');
             }
-            if (panelMatch(table, 'streamtip')) {
-                sendCommand('donationpanelupdatestreamtip');
-            }
             if (panelMatch(table, 'subscribeHandler')) {
-                sendCommand('subscribepanelupdate');
+                sendCommand('subscriberpanelupdate');
             }
             if (panelMatch(table, 'bitsSettings')) {
                 sendCommand('reloadbits');
             }
-            if (panelMatch(table, 'gameWispSubHandler')) {
-                sendCommand('gamewisppanelupdate');
+            if (panelMatch(table, 'tipeeeStreamHandler')) {
+                sendCommand('tipeeestreamreload');
             }
-            setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
-        } 
+            if (panelMatch(table, 'streamElementsHandler')) {
+                sendCommand('streamelementsreload');
+            }
+            setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
+        }
     }
 
 

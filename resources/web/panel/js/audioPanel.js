@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
@@ -33,7 +33,10 @@
      */
     var announceInChat = false,
         playlists = [],
-        sounds = [];
+        sounds = [],
+        soundQueue = [],
+        audioPanelLoaded = false,
+        isPlaying = false;
 
     /**
      * @function onMessage
@@ -64,6 +67,19 @@
             }
         }
 
+        if (panelCheckQuery(msgObject, 'audio_ytplaylists')) {
+            if (msgObject['results'].length === 0) {
+                return;
+            }
+
+            playlists = [];
+
+            for (var idx in msgObject['results']) {
+                playlists.push(msgObject['results'][idx]['value']);
+            }
+            $.playlists = playlists;
+        }
+
         if (msgObject['audio_panel_hook'] !== undefined) {
             playIonSound(msgObject['audio_panel_hook']);
         }
@@ -89,51 +105,51 @@
         }
 
         if (panelCheckQuery(msgObject, 'audio_hook')) {
-            var html = "<table>";
-            sounds.splice(0);
-
+            sounds = [];
             for (var idx in msgObject['results']) {
-
-                sounds.push({name: msgObject['results'][idx]['key'], desc: msgObject['results'][idx]['value']});
-
-                html += "<tr class=\"textList\">" +
-                    "    <td style=\"width: 5%\">" +
-                    "        <div id=\"deleteAudio_" + msgObject['results'][idx]['key'] + "\" type=\"button\" class=\"btn btn-default btn-xs\" " +
-                    "             onclick=\"$.deleteAudio('" + msgObject['results'][idx]['key'] + "')\"><i class=\"fa fa-trash\" />" +
-                    "        </div>" +
-                    "    </td>" +
-                    "    <td>" + msgObject['results'][idx]['value'] + "</td>" +
-                    "</tr>";
+                sounds.push({name: msgObject['results'][idx]['key'], desc: msgObject['results'][idx]['key']});
             }
-            html += "</table>";
-            $('#audioHooks').html(html);
-            handleInputFocus();
 
-            setTimeout(function () {
-                $(document).ready(function() {
-                    ion.sound({
-                        sounds: sounds,
-                        path: "/panel/js/ion-sound/sounds/",
-                        preload: true,
-                        volume: 1.0,
-                        ready_callback: ionSoundLoaded,
-                        ended_callback: clearIonSoundPlaying 
+            if (sounds.length === 0) {
+                $('#audioPanelButtons').html('No sounds configured, please click Reload Audio Hooks if sounds are installed.');
+                $("#ionSoundLoaded").html("<span style=\"float: right\" class=\"greenPill-sm\">Ready</span>");
+            } else {
+                setTimeout(function () {
+                    $(document).ready(function() {
+                        ion.sound({
+                            sounds: sounds,
+                            path: "/config/audio-hooks/",
+                            preload: true,
+                            volume: 1.0,
+                            ready_callback: ionSoundLoaded,
+                            ended_callback: clearIonSoundPlaying
+                        });
                     });
-                    sendAudioHooksToCore();
-                });
-            }, 2000);
+                }, 2000);
+            }
         }
 
-        if (panelCheckQuery(msgObject, 'audio_ytplaylists')) {
-            if (msgObject['results'].length === 0) {
-                return;
+        if (panelCheckQuery(msgObject, 'audio_hook_reload')) {
+            sounds = [];
+            for (var idx in msgObject['results']) {
+                sounds.push({name: msgObject['results'][idx]['key'], desc: msgObject['results'][idx]['key']});
             }
 
-            playlists.splice(0);
-
-            for (var idx in msgObject['results']) {
-                playlists.push(msgObject['results'][idx]['value']);
-            } 
+            if (sounds.length === 0) {
+                $('#audioPanelButtons').html('No sounds configured, please click Reload Audio Hooks if sounds are installed.');
+                $("#ionSoundLoaded").html("<span style=\"float: right\" class=\"greenPill-sm\">Ready</span>");
+            } else {
+                ion.sound({
+                    sounds: sounds,
+                    path: "/config/audio-hooks/",
+                    preload: true,
+                    volume: 1.0,
+                    ready_callback: ionSoundLoaded,
+                    ended_callback: clearIonSoundPlaying
+                });
+            }
+            loadAudioPanel();
+            $('#reloadSounds').html('Reload Audio Hooks');
         }
 
         if (panelCheckQuery(msgObject, 'audio_ytptoggle1')) {
@@ -167,66 +183,40 @@
     }
 
     /**
-     * @function sendAudioHooksToCore
-     */
-    function sendAudioHooksToCore() {
-        var jsonObject = {};
-        jsonObject["audio_hooks"] = sounds;
-        connection.send(JSON.stringify(jsonObject));
-    }
-
-    /**
      * @function doQuery
      */
     function doQuery(message) {
+        sendDBKeys('audio_ytplaylists', 'ytPanelPlaylist');
         sendDBQuery('audio_ytpMaxReqs', 'ytSettings', 'songRequestsMaxParallel');
         sendDBQuery('audio_ytpMaxLength', 'ytSettings', 'songRequestsMaxSecondsforVideo');
         sendDBQuery('audio_ytptoggle1', 'ytSettings', 'announceInChat');
         sendDBQuery('audio_ytpDJName', 'ytSettings', 'playlistDJname');
         sendDBKeys('audio_songblacklist', 'ytpBlacklistedSong');
         sendDBKeys('audio_userblacklist', 'ytpBlacklist');
-        sendDBKeys('audio_ytplaylists', 'ytPanelPlaylist');
         sendDBKeys('audio_hook', 'audio_hooks');
     }
 
-    /** 
-     * @function addSound
+    /**
+     * @function reloadAudioHooks
+     * Note that there is not a query performed here because the command sends back a
+     * doDBKeysQuery() call with the ID of audio_hook_reload.
      */
-    function addSound() {
-        var name = $('#soundImput').val();
-        var desc = $('#soundImputDesc').val();
+    function reloadAudioHooks() {
+        $('#reloadSounds').html('Please wait...');
+        sendCommand('reloadaudiopanelhooks');
+    }
 
-        if (name.length && desc.length != 0) {
-            sendDBUpdate('audio_hook_add', 'audio_hooks', name, desc);
-        }
-
-        $('#soundImput').val('');
-        $('#soundImputDesc').val('');
-        setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
-    };
-
-    /** 
-     * @function addSound
-     */
-    function deleteAudio(audio) {
-        if (audio.length != 0) {
-            $("#deleteAudio_" + audio).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
-            sendDBDelete('deleteAudio_' + audio, 'audio_hooks', audio);
-        }
-        setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
-    };
-
-    /** 
+    /**
      * @function deleteBSong
      * @param {String} song
      */
     function deleteBSong(song) {
-        $("#deleteBSong_" + song).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteBSong_" + song).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBDelete("audio_bsong_" + song, "ytpBlacklistedSong", song);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     };
 
-    /** 
+    /**
      * @function blacklistSong
      */
     function blacklistSong() {
@@ -238,17 +228,17 @@
         setTimeout(function() { $("#songBlacklist").val(''); }, TIMEOUT_WAIT_TIME);
     };
 
-    /** 
+    /**
      * @function deleteUser
      * @param {String} user
      */
     function deleteUser(user) {
-        $("#deleteBUser_" + user).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteBUser_" + user).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBDelete("audio_user_" + user, "ytpBlacklist", user);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     };
 
-    /** 
+    /**
      * @function blacklistUser
      */
     function blacklistUser() {
@@ -284,10 +274,14 @@
      * @function playIonSound
      * @param {String} name
      */
-    function playIonSound(name)
-    {
-        $("#ionSoundPlaying").fadeIn(400);
-        ion.sound.play(name);
+    function playIonSound(name) {
+        if (!isPlaying) {
+            isPlaying = true;
+            $("#ionSoundPlaying").fadeIn(400);
+            ion.sound.play(name);
+        } else {
+            soundQueue.push(name);
+        }
     }
 
     /**
@@ -295,6 +289,7 @@
      */
     function clearIonSoundPlaying() {
         $("#ionSoundPlaying").fadeOut(400);
+        isPlaying = false;
     }
 
     /**
@@ -391,14 +386,14 @@
      */
     function fillYouTubePlayerIframe() {
         $('#youTubePlayerIframe').html('<iframe id="youTubePlayer" frameborder="0" scrolling="auto" height="400" width="680"'+
-                                       '        src="' + getProtocol() + url[0] + ':' + (getPanelPort() + 1) + '/ytplayer?start_paused">');
+                                       '        src="' + getProtocol() + url[0] + ':' + window.location.port + '/ytplayer?start_paused">');
     }
 
     /**
      * @function launchYouTubePlayer
      */
     function launchYouTubePlayer() {
-        window.open(getProtocol() + url[0] + ':' + (getPanelPort() + 1) + '/ytplayer', 'PhantomBot YouTube Player',
+        window.open(getProtocol() + url[0] + ':' + window.location.port + '/ytplayer', 'PhantomBot YouTube Player',
                     'menubar=no,resizeable=yes,scrollbars=yes,status=no,toolbar=no,height=700,width=900,location=no' );
     }
 
@@ -430,11 +425,23 @@
     // Query the DB every 30 seconds for updates.
     setInterval(function() {
         var active = $('#tabs').tabs('option', 'active');
-        if (active == 17 && isConnected && !isInputFocus()) {
+        if (active == 19 && isConnected && !isInputFocus()) {
             newPanelAlert('Refreshing Audio Data', 'success', 1000);
             doQuery();
         }
     }, 3e4);
+
+    // Queue for when multiple sounds are called at once. This will stop multiple sounds from playing at the same time.
+    setInterval(function() {
+        if (soundQueue.length > 0) {
+            for (var i in soundQueue) {
+                if (!isPlaying) {
+                    playIonSound(soundQueue[i]);
+                    soundQueue.splice(i, 1);
+                }
+            }
+        }
+    }, 1e3);
 
     // Export to HTML
     $.audioOnMessage = onMessage;
@@ -457,6 +464,5 @@
     $.deleteUser = deleteUser;
     $.playlists = playlists;
     $.loadYtplaylist = loadYtplaylist;
-    $.addSound = addSound;
-    $.deleteAudio = deleteAudio;
+    $.reloadAudioHooks = reloadAudioHooks;
 })();

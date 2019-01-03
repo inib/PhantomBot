@@ -1,6 +1,6 @@
 <!--
 
- Copyright (C) 2016 phantombot.tv
+ Copyright (C) 2016-2018 phantombot.tv
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -14,7 +14,7 @@
 
  You should have received a copy of the GNU General Public License
  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- 
+
  @author IllusionaryOne
 -->
 
@@ -46,7 +46,7 @@
     <div id="_rafflePanelDisabled" />
     <div id="_rafflePanel">
 
-    <button type="button" class="btn btn-primary inline pull-right" onclick="$.raffle.repick()">Repick</button>
+    <button type="button" class="btn btn-primary inline pull-right" onclick="$.raffle.repick()">Draw</button>
     <button type="button" class="btn btn-primary inline pull-right" onclick="$.raffle.end()">Close</button>
     <div class="dropdown">
         <button class="btn btn-primary inline pull-right dropdown-toggle" type="button" data-toggle="dropdown">Open&nbsp;<span class="caret pull-right" style="margin-top: 8px;"></span></button>
@@ -68,14 +68,16 @@
                 <div class="modal-body">
                     <lable>Keyword</lable>
                     <div class="btn-group">
-                        <input style="width: 400px; margin-left: 55px;" type="text" class="form-control" id="raffle-keyword" placeholder="Keyword" />
+                        <input style="width: 400px; margin-left: 55px;" type="text" class="form-control" id="raffle-keyword" placeholder="Keyword" data-toggle="tooltip"
+                        title="This is the keyword that users will have to type in chat to enter. Note if you add an ! in front of the keyword it will make it a command."/>
                     </div>
 
                     <br>
                     <br>
                     <lable>Entry Fee</lable>
                     <div class="btn-group">
-                        <input style="width: 400px; margin-left: 51px;" type="number" min="1" class="form-control" id="raffle-cost" placeholder="Points" />
+                        <input style="width: 400px; margin-left: 51px;" type="number" min="1" class="form-control" id="raffle-cost" placeholder="Points" data-toggle="tooltip"
+                        title="Amount of points that a viewer must have to join the raffle. This will also take this amount of points form their balance."/>
                     </div>
 
                     <br>
@@ -86,6 +88,8 @@
                             Everyone<span class="caret pull-right" style="margin-top: 8px;"></span></button>
 
                         <ul class="dropdown-menu" style="margin-left: 48px;">
+                            <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('subscribers')">Subscribers</a>
+                            </li>
                             <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('followers')">Followers</a>
                             </li>
                             <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('everyone')">Everyone</a>
@@ -114,7 +118,7 @@
                         <span id="raffle-points-sub" style="margin-left: 10px;">1 Times</span>
                     </div>
                     </div>
-                
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default pull-left" data-toggle="modal" data-target="#raffleSettings"><i class="fa fa-cog"/></button>
                     <button type="button" class="btn btn-default" data-dismiss="modal" onclick="$.raffle.openPoints()">Open</button>
@@ -123,7 +127,7 @@
             </div>
         </div>
     </div>
-    
+
     <div id="timeRaffle" class="modal fade" role="dialog">
         <div class="modal-dialog">
             <div class="modal-content" style="background: rgb(28, 28, 36); border-radius: 3px;">
@@ -135,14 +139,16 @@
                 <div class="modal-body">
                     <lable>Keyword</lable>
                     <div class="btn-group">
-                        <input style="width: 400px; margin-left: 55px;" type="text" class="form-control" id="raffle-time-keyword" placeholder="Keyword" />
+                        <input style="width: 400px; margin-left: 55px;" type="text" class="form-control" id="raffle-time-keyword" placeholder="Keyword" data-toggle="tooltip"
+                        title="This is the keyword that users will have to type in chat to enter. Note if you add an ! in front of the keyword it will make it a command."/>
                     </div>
 
                     <br>
                     <br>
                     <lable>Minimum Time</lable>
                     <div class="btn-group">
-                        <input style="width: 400px; margin-left: 15px;" type="number" min="1" class="form-control" id="raffle-time-cost" placeholder="Time" />
+                        <input style="width: 400px; margin-left: 15px;" type="number" min="1" class="form-control" id="raffle-time-cost" placeholder="Time (Minutes)" data-toggle="tooltip"
+                        title="Amount of time in minutes that a viewer must have been in the channel to join the raffle."/>
                     </div>
 
                     <br>
@@ -153,6 +159,8 @@
                             Everyone<span class="caret pull-right" style="margin-top: 8px;"></span></button>
 
                         <ul class="dropdown-menu" style="margin-left: 48px;">
+                            <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('subscribers')">Subscribers</a>
+                            </li>
                             <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('followers')">Followers</a>
                             </li>
                             <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('everyone')">Everyone</a>
@@ -181,7 +189,7 @@
                         <span id="raffle-time-sub" style="margin-left: 10px;">1 Times</span>
                     </div>
                     </div>
-                
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default pull-left" data-toggle="modal" data-target="#raffleSettings"><i class="fa fa-cog"/></button>
                     <button type="button" class="btn btn-default" data-dismiss="modal" onclick="$.raffle.openTime()">Open</button>
@@ -202,7 +210,8 @@
                 <div class="modal-body">
                     <lable>Keyword</lable>
                     <div class="btn-group">
-                        <input style="width: 400px; margin-left: 55px;" type="text" class="form-control" id="raffle-normal-keyword" placeholder="Keyword" />
+                        <input style="width: 400px; margin-left: 55px;" type="text" class="form-control" id="raffle-normal-keyword" placeholder="Keyword" data-toggle="tooltip"
+                        title="This is the keyword that users will have to type in chat to enter. Note if you add an ! in front of the keyword it will make it a command."/>
                     </div>
 
                     <br>
@@ -213,6 +222,8 @@
                             Everyone<span class="caret pull-right" style="margin-top: 8px;"></span></button>
 
                         <ul class="dropdown-menu" style="margin-left: 48px;">
+                            <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('subscribers')">Subscribers</a>
+                            </li>
                             <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('followers')">Followers</a>
                             </li>
                             <li><a style="cursor: pointer; width: 400px;" class="dropdown-shadow" onclick="$.setEligibility('everyone')">Everyone</a>
@@ -241,7 +252,7 @@
                         <span id="raffle-normal-subluck2" style="margin-left: 10px;">1 Times</span>
                     </div>
                     </div>
-                
+
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default pull-left" data-toggle="modal" data-target="#raffleSettings"><i class="fa fa-cog"/></button>
                     <button type="button" class="btn btn-default" data-dismiss="modal" onclick="$.raffle.openNormal()">Open</button>
@@ -316,7 +327,7 @@
                             </li>
                         </ul>
                     </div>
-                
+
                 <br><br>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal" onclick="$.raffle.settings()">Save</button>
@@ -347,7 +358,7 @@
         <form role="form">
             <div class="form-group" onkeypress="return event.keyCode != 13">
                 <label for="traffleOpen">Open/Close a Ticket Raffle</label>
-                <button type="button" class="btn btn-primary inline pull-right" onclick="$.traffleRepick()">Repick Winner</button>
+                <button type="button" class="btn btn-primary inline pull-right" onclick="$.traffleRepick()">Draw Winner</button>
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.traffleClose()">Close Raffle</button>
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.traffleOpen()">Open Raffle</button>
                 <input type="number" min="0" class="form-control" id="traffleMaxInput" placeholder="Max Entries" />
@@ -378,7 +389,7 @@
             <div class="form-group" onkeypress="return event.keyCode != 13">
                 <label for="traffleTimer">Message Timer (minutes)</label>
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateTRaffleSettings('traffleTimer')">Submit</button>
-                <input type="number" min="0" class="form-control" id="traffleTimer" placeholder="Amount" data-toggle="tooltip" 
+                <input type="number" min="0" class="form-control" id="traffleTimer" placeholder="Amount" data-toggle="tooltip"
                 title="Auto announce timer for the raffle. Use 0 to disable it. This will only be applied when a new raffle starts."/>
             </div>
         </form>

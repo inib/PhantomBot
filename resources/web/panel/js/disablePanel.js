@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,9 @@
             if (panelMatch(module, './systems/youtubePlayer.js')) {
                 handlePanel('./systems/youtubePlayer.js', '#_youtubePlayerPanel', moduleEnabled);
             }
+            if (panelMatch(module, './systems/audioPanelSystem.js')) {
+                handlePanel('./systems/audioPanelSystem.js', '#_audioPanel', moduleEnabled);
+            }
             if (panelMatch(module, './commands/customCommands.js')) {
                 handlePanel('./commands/customCommands.js', '#_editCustomCommandsPanel', moduleEnabled);
                 handlePanel('./commands/customCommands.js', '#_viewCustomCommandsPanel', moduleEnabled);
@@ -91,10 +94,11 @@
             if (panelMatch(module, './handlers/followHandler.js')) {
                 handlePanel('./handlers/followHandler.js', '#_followAlertsPanel', moduleEnabled);
             }
-            if (panelMatch(module, './handlers/donationHandler.js')) {
-                handlePanel('./handlers/donationHandler.js', '#_donationAlertsPanel', moduleEnabled);
-                handlePanel('./handlers/donationHandler.js', '#_donationsPanel', moduleEnabled);
-            }
+           // Removed this since the donation tab is used for more than one module now.
+           //if (panelMatch(module, './handlers/donationHandler.js')) {
+           //    handlePanel('./handlers/donationHandler.js', '#_donationAlertsPanel', moduleEnabled);
+           //    handlePanel('./handlers/donationHandler.js', '#_donationsPanel', moduleEnabled);
+           //}
             if (panelMatch(module, './handlers/streamTipHandler.js')) {
                 handlePanel('./handlers/streamTipHandler.js', '#_streamtipdonationAlertsPanel', moduleEnabled);
                 handlePanel('./handlers/streamTipHandler.js', '#_streamtipdonationsPanel', moduleEnabled);
@@ -105,10 +109,6 @@
             }
             if (panelMatch(module, './handlers/subscribeHandler.js')) {
                 handlePanel('./handlers/subscribeHandler.js', '#_twitchSubPanel', moduleEnabled);
-            }
-            if (panelMatch(module, './handlers/gameWispHandler.js')) {
-                handlePanel('./handlers/gameWispHandler.js', '#_gwSubPanel', moduleEnabled);
-                handlePanel('./handlers/gameWispHandler.js', '#_gwTierPanel', moduleEnabled);
             }
             if (panelMatch(module, './systems/noticeSystem.js')) {
                 handlePanel('./systems/noticeSystem.js', '#_noticeConfigPanel', moduleEnabled);
@@ -140,8 +140,8 @@
             if (panelMatch(module, './systems/auctionSystem.js')) {
                 handlePanel('./systems/auctionSystem.js', '#_auctionPanel', moduleEnabled);
             }
-            if (panelMatch(module, './systems/betSystem.js')) {
-                handlePanel('./systems/betSystem.js', '#_betPanel', moduleEnabled);
+            if (panelMatch(module, './systems/bettingSystem.js')) {
+                handlePanel('./systems/bettingSystem.js', '#_bettingPanel', moduleEnabled);
             }
             if (panelMatch(module, './systems/raffleSystem.js')) {
                 handlePanel('./systems/raffleSystem.js', '#_rafflePanel', moduleEnabled);
@@ -174,7 +174,66 @@
             if (panelMatch(module, './games/gambling.js')) {
                 handlePanel('./games/gambling.js', '#_gamlbingPanel', moduleEnabled);
             }
-        }            
+            if (panelMatch(module, './handlers/tipeeeStreamHandler.js')) {
+                handlePanel('./handlers/tipeeeStreamHandler.js', '#_tipeeeStreamDonationsPanel', moduleEnabled);
+            }
+            if (panelMatch(module, './handlers/streamElementsHandler.js')) {
+                handlePanel('./handlers/streamElementsHandler.js', '#_streamElementsDonationsPanel', moduleEnabled);
+            }
+
+            // Discord modules.
+            if (panelMatch(module, './discord/handlers/bitsHandler.js')) {
+                handlePanel('./discord/handlers/bitsHandler.js', '#_discord_bitsHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/followHandler.js')) {
+                handlePanel('./discord/handlers/followHandler.js', '#_discord_followHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/subscribeHandler.js')) {
+                handlePanel('./discord/handlers/subscribeHandler.js', '#_discord_subscribeHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/tipeeeStreamHandler.js')) {
+                handlePanel('./discord/handlers/tipeeeStreamHandler.js', '#_discord_tipeeeStreamHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/streamElementsHandler.js')) {
+                handlePanel('./discord/handlers/streamElementsHandler.js', '#_discord_streamElementsHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/streamtipHandler.js')) {
+                handlePanel('./discord/handlers/streamtipHandler.js', '#_discord_streamTipHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/streamlabsHandler.js')) {
+                handlePanel('./discord/handlers/streamlabsHandler.js', '#_discord_streamLabsHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/hostHandler.js')) {
+                handlePanel('./discord/handlers/hostHandler.js', '#_discord_hostHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/twitterHandler.js')) {
+                handlePanel('./discord/handlers/twitterHandler.js', '#_discord_twitterHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/keywordHandler.js')) {
+                handlePanel('./discord/handlers/keywordHandler.js', '#_discord_keywordHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/streamHandler.js')) {
+                handlePanel('./discord/handlers/streamHandler.js', '#_discord_streamHandler', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/handlers/keywordHandler.js')) {
+                handlePanel('./discord/handlers/keywordHandler.js', '#_discord_customkeywords', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/systems/greetingsSystem.js')) {
+                handlePanel('./discord/systems/greetingsSystem.js', '#_discord_greetingSystem', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/commands/customCommands.js')) {
+                handlePanel('./discord/commands/customCommands.js', '#_discord_customCommands', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/games/slotMachine.js')) {
+                handlePanel('./discord/games/slotMachine.js', '#_discord_slotMachine', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/games/gambling.js')) {
+                handlePanel('./discord/games/gambling.js', '#_discord_gambling', moduleEnabled);
+            }
+            if (panelMatch(module, './discord/games/roll.js')) {
+                handlePanel('./discord/games/roll.js', '#_discord_roll', moduleEnabled);
+            }
+        }
     }
 
     // Export Function

@@ -1,158 +1,140 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * This script is for announcing bits from Twitch, and rewarding the user with points if the caster wants too.
  *
- * Last edited on August 10, 2016 @ 2:35AM EST.
  */
 (function() {
-	var toggle = $.getSetIniDbBoolean('bitsSettings', 'toggle', false),
-	    message = $.getSetIniDbString('bitsSettings', 'message', '(name) just cheered (amount) bits!'),
-	    reward = $.getSetIniDbNumber('bitsSettings', 'reward', 0),
-	    minimum = $.getSetIniDbNumber('bitsSettings', 'minimum', 0),
-	    announceBits = false;
+    var toggle = $.getSetIniDbBoolean('bitsSettings', 'toggle', false),
+        message = $.getSetIniDbString('bitsSettings', 'message', '(name) just cheered (amount) bits!'),
+        minimum = $.getSetIniDbNumber('bitsSettings', 'minimum', 0),
+        announceBits = false;
 
-	/**
-	 * Used by the panel when someone updates a setting to reload the script vars.
-	 * 
-	 * @fucntion reloadBits
-	 */
-	function reloadBits() {
-		toggle = $.getIniDbBoolean('bitsSettings', 'toggle', false);
-	    message = $.getIniDbString('bitsSettings', 'message', '(name) just cheered (amount) bits!');
-	    reward = $.getIniDbNumber('bitsSettings', 'reward', 0);
-	    minimum = $.getIniDbNumber('bitsSettings', 'minimum', 0);
-	}
+    /*
+     * @function reloadBits
+     */
+    function reloadBits() {
+        toggle = $.getIniDbBoolean('bitsSettings', 'toggle', false);
+        message = $.getIniDbString('bitsSettings', 'message', '(name) just cheered (amount) bits!');
+        minimum = $.getIniDbNumber('bitsSettings', 'minimum', 0);
+    }
 
-	/**
-	 * Gets the event from the core when someone cheers in the chat.
-	 * 
-	 * @event BitsEvent
-	 */
-	$.bind('Bits', function(event) {
-		if (!announceBits || !toggle) {
-			return;
-		}
-		var s = message;
+    /*
+     * @event twitchBits
+     */
+    $.bind('twitchBits', function(event) {
+        var username = event.getUsername(),
+            bits = event.getBits(),
+            ircMessage = event.getMessage(),
+            emoteRegexStr = $.twitch.GetCheerEmotesRegex(),
+            s = message;
 
-		/** Match (name) if it is in the message to replace it with the username to cheered. */
-		if (s.match(/\(name\)/g)) {
-			s = $.replace(s, '(name)', $.username.resolve(event.getUsername()));
-		}
+        if (announceBits === false || toggle === false) {
+            return;
+        }
 
-		/** Match (amount) if it is in the message to replace it with the amount of bits the user cheered. */
-		if (s.match(/\(amount\)/g)) {
-			s = $.replace(s, '(amount)', event.getBits());
-		}
+        if (bits == 1) {
+            s = $.replace(s, 'bits', 'bit');
+        }
 
-		/** Match (reward) if it is in the message to replace it with the reward the owner has set when someone cheers. */
-		if (s.match(/\(reward\)/g)) {
-			s = $.replace(s, '(reward)', $.getPointsString(reward));
-		}
+        if (s.match(/\(name\)/g)) {
+            s = $.replace(s, '(name)', username);
+        }
 
-		/** Make sure the module is on, and the bits toggle has been toggle on by the bot owner. */
-		if (event.getBits() >= minimum) {//Check if the user cheered enough bits. Default is 0, so any amount.
-			$.say(s);
-			if (reward > 0) {//Check if the owner set a reward for when someone cheers. Default is non.
-			    $.inidb.incr('points', event.getUsername(), parseInt(reward));
-		    }
-		}
-	});
+        if (s.match(/\(amount\)/g)) {
+            s = $.replace(s, '(amount)', bits);
+        }
+ 
+        if (s.match(/\(message\)/g)) {
+            s = $.replace(s, '(message)', ircMessage);
+            if (emoteRegexStr.length() > 0) {
+                emoteRegex = new RegExp(emoteRegexStr, 'gi');
+                s = String(s).valueOf();
+                s = s.replace(emoteRegex, '');
+            }
+        }
 
-	/**
-	 * Gets the event from the core when someone uses a command
-	 * 
-	 * @event command
-	 */
-	$.bind('command', function(event) {
-		var sender = event.getSender(),
-		    command = event.getCommand(),
-		    args = event.getArgs(),
-		    argsString = event.getArguments(),
-		    action = args[0];
+        if (bits >= minimum) {
+            $.say(s);
+        }
 
-		/**
-		 * Toggles the bits announcements.
-		 *
-		 * @commandpath bitstoggle - Toggles the bits announcements.
-		 */
-		if (command.equalsIgnoreCase('bitstoggle')) {
-			if (toggle) {
-				toggle = false;
-				$.setIniDbBoolean('bitsSettings', 'toggle', toggle);
-				$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.toggle.off'));
-				$.log.event(sender + ' disabled bit announcements');
-			} else {
-				toggle = true;
-				$.setIniDbBoolean('bitsSettings', 'toggle', toggle);
-				$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.toggle.on'));
-				$.log.event(sender + ' enabled bit announcements');
-			}
-		}
+        $.writeToFile(username + ' ', './addons/bitsHandler/latestCheer.txt', false);
+        $.writeToFile(username + ': ' + bits + ' ', './addons/bitsHandler/latestCheer&Bits.txt', false);
+    });
 
-		/**
-		 * Allows you to set a message for when someone cheers bits.
-		 *
-		 * @commandpath bitsmessage - Sets a message for when someone cheers bits.
-		 */
-		if (command.equalsIgnoreCase('bitsmessage')) {
-			if (!action) {
-				$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.message.usage'));
-				return;
-			}
+    /*
+     * @event command
+     */
+    $.bind('command', function(event) {
+        var sender = event.getSender(),
+            command = event.getCommand(),
+            args = event.getArgs(),
+            argsString = event.getArguments(),
+            action = args[0];
 
-			message = argsString;
-			$.setIniDbString('bitsSettings', 'message', message);
-			$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.message.set', message));
-			$.log.event(sender + ' changed the bits message to: ' + message);
-		}
+        /*
+         * @commandpath bitstoggle - Toggles the bits announcements.
+         */
+        if (command.equalsIgnoreCase('bitstoggle')) {
+            toggle = !toggle;
+            $.setIniDbBoolean('bitsSettings', 'toggle', toggle);
+            $.say($.whisperPrefix(sender) + (toggle ? $.lang.get('bitshandler.toggle.on') : $.lang.get('bitshandler.toggle.off')))
+        }
 
-		/**
-		 * Allows you to set a reward for when someone cheers bits.
-		 *
-		 * @commandpath bitsreward - Sets a reward for when someone cheers bits.
-		 */
-		if (command.equalsIgnoreCase('bitsreward')) {
-			if (!isNaN(action) || !parseInt(action)) {
-				$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.reward.usage'));
-				return;
-			}
 
-			reward = parseInt(action);
-			$.setIniDbNumber('bitsSettings', 'reward', reward);
-			$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.reward.set', $.getPointsString(reward)));
-			$.log.event(sender + ' changed the bits reward to: ' + $.getPointsString(reward));
-		}
+        /*
+         * @commandpath bitsmessage - Sets a message for when someone cheers bits.
+         */
+        if (command.equalsIgnoreCase('bitsmessage')) {
+            if (action === undefined) {
+                $.say($.whisperPrefix(sender) + $.lang.get('bitshandler.message.usage'));
+                return;
+            }
 
-		/**
-		 * Allows you to set how many bits someone needs to cheer before announcing it.
-		 *
-		 * @commandpath bitsminimum - Set how many bits someone needs to cheer before announcing it.
-		 */
-		if (command.equalsIgnoreCase('bitsminimum')) {
-			if (!isNaN(action) || !parseInt(action)) {
-				$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.minimum.usage'));
-				return;
-			}
+            message = argsString;
+            $.setIniDbString('bitsSettings', 'message', message);
+            $.say($.whisperPrefix(sender) + $.lang.get('bitshandler.message.set', message));
+        }
 
-			minimum = parseInt(action);
-			$.setIniDbNumber('bitsSettings', 'minimum', minimum);
-			$.say($.whisperPrefix(sender) + $.lang.get('bitshandler.minimum.set', minimum));
-			$.log.event(sender + ' changed the bits minimum to: ' + minimum + ' bits.');
-		}
-	});
+        /*
+         * @commandpath bitsminimum - Set how many bits someone needs to cheer before announcing it.
+         */
+        if (command.equalsIgnoreCase('bitsminimum')) {
+            if (isNaN(parseInt(action))) {
+                $.say($.whisperPrefix(sender) + $.lang.get('bitshandler.minimum.usage'));
+                return;
+            }
 
-    /**
-     * Register commands once the bot is fully loaded.
-     *
+            minimum = parseInt(action);
+            $.setIniDbNumber('bitsSettings', 'minimum', minimum);
+            $.say($.whisperPrefix(sender) + $.lang.get('bitshandler.minimum.set', minimum));
+            $.log.event(sender + ' changed the bits minimum to: ' + minimum + ' bits.');
+        }
+    });
+
+    /*
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./handlers/bitsHandler.js')) {
-        	$.registerChatCommand('./handlers/bitsHandler.js', 'bitstoggle', 1);
-        	$.registerChatCommand('./handlers/bitsHandler.js', 'bitsmessage', 1);
-        	$.registerChatCommand('./handlers/bitsHandler.js', 'bitsreward', 1);
-        	$.registerChatCommand('./handlers/bitsHandler.js', 'bitsminimum', 1);
-        	announceBits = true; //Make sure the module is enabled to announce bits, incase the toggle is on.
-        }
+        $.registerChatCommand('./handlers/bitsHandler.js', 'bitstoggle', 1);
+        $.registerChatCommand('./handlers/bitsHandler.js', 'bitsmessage', 1);
+        $.registerChatCommand('./handlers/bitsHandler.js', 'bitsminimum', 1);
+        announceBits = true;
     });
 
     $.reloadBits = reloadBits;

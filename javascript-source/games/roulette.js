@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * roulette.js
  *
@@ -11,7 +28,7 @@
         },
         lastRandom = 0;
 
-    function reloadRoulette () {
+    function reloadRoulette() {
         timeoutTime = $.getIniDbNumber('roulette', 'timeoutTime');
     };
 
@@ -37,9 +54,7 @@
      * @param {string} username
      */
     function timeoutUserR(username) {
-        setTimeout(function() {
-            $.say('.timeout ' + username + ' ' + timeoutTime);
-        }, 1800);
+        $.session.say('.timeout ' + username + ' ' + timeoutTime);
     };
 
     /**
@@ -103,13 +118,12 @@
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./games/roulette.js')) {
-            if (responseCounts.win == 0 && responseCounts.lost == 0) {
-                loadResponses();
-            }
-            $.registerChatCommand('./games/roulette.js', 'roulette', 7);
-            $.registerChatCommand('./games/roulette.js', 'roulettetimeouttime', 1);
+        if (responseCounts.win == 0 && responseCounts.lost == 0) {
+            loadResponses();
         }
+
+        $.registerChatCommand('./games/roulette.js', 'roulette', 7);
+        $.registerChatCommand('./games/roulette.js', 'roulettetimeouttime', 1);
     });
 
     $.reloadRoulette = reloadRoulette;

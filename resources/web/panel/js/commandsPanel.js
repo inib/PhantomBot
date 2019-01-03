@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,12 +15,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
 /*
- * customCommandsPanel.js
+ * commandsPanel.js
  * Drives the Custom Commands Panel
  */
 (function() {
@@ -33,10 +33,11 @@
         cooldownMsg = "false",
         permcomMsg = "true",
         disabledCommands = [],
-        commands = [];
+        commands = [],
+        botCommands = [];
 
-        modeIcon['false'] = "<i style=\"color: #6136b1\" class=\"fa fa-circle-o\" />";
-        modeIcon['true'] = "<i style=\"color: #6136b1\" class=\"fa fa-circle\" />";
+        modeIcon['false'] = "<i style=\"color: var(--main-color)\" class=\"fa fa-circle-o\" />";
+        modeIcon['true'] = "<i style=\"color: var(--main-color)\" class=\"fa fa-circle\" />";
 
         groupIcons['0'] = "<i class=\"fa fa-television\" />";
         groupIcons['1'] = "<i class=\"fa fa-cog\" />";
@@ -70,36 +71,20 @@
 
             if (panelCheckQuery(msgObject, 'commands_cooldown')) {
                 html = "<table>";
+                msgObject['results'].sort(sortCommandTable);
                 for (idx in msgObject['results']) {
                     commandName = msgObject['results'][idx]['key'];
-                    time = msgObject['results'][idx]['value'];
-
-                    if (panelMatch(commandName, 'globalCooldown')) {
-                        globalCooldown = msgObject['results'][idx]['value'];
-                        continue;
-                    }
-                    if (panelMatch(commandName, 'globalCooldownTime')) {
-                        globalCooldownTime = msgObject['results'][idx]['value'];
-                        continue;
-                    }
-                    if (panelMatch(commandName, 'modCooldown')) {
-                        modCooldown = msgObject['results'][idx]['value'];
-                        continue;
-                    }
-                    if (panelMatch(commandName, 'perUserCooldown')) {
-                        perUserCooldown  = msgObject['results'][idx]['value'];
-                        continue;
-                    }
+                    time = JSON.parse(msgObject['results'][idx]['value']).seconds;
 
                     foundData = true;
                     html += '<tr style="textList">' +
-                    '    <td style="width: 10%">!' + commandName + '</td>' +
+                    '    <td style="width: 10%" >!' + commandName + '</td>' +
                     '    <td style="vertical-align: middle">' +
                     '        <form onkeypress="return event.keyCode != 13">' +
-                    '            <input style="width: 60%" type="text" id="editCommandCooldown_' + commandName + '"' +
-                    '                   value="' + time + '" />' +
-                    '              <button type="button" class="btn btn-default btn-xs" onclick="$.editCooldown(\'' + commandName + '\')"><i class="fa fa-pencil" /> </button> ' +
-                    '              <button type="button" class="btn btn-default btn-xs" id="deleteCooldown_' + commandName + '" onclick="$.deleteCooldown(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
+                    '            <input style="width: 95%" type="text" data-toggle="tooltip" title="Click to edit the cooldown." onclick="$.editCooldown(\'' + commandName + '\', \'' + time + '\', \''+ JSON.parse(msgObject['results'][idx]['value']).isGlobal+ '\')"' +
+                    '                       class="input-control" id="editCommandCooldown_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '"' +
+                    '                   value="' + time + ' seconds. (Global: ' + JSON.parse(msgObject['results'][idx]['value']).isGlobal + ')" />' +
+                    '              <button style="float: right;" type="button" class="btn btn-default btn-xs" id="deleteCooldown_' + commandName + '" onclick="$.deleteCooldown(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
                     '             </form>' +
                     '        </form>' +
                     '    </td>' +
@@ -110,12 +95,25 @@
                 if (!foundData) {
                     html = "<i>No entries in cooldown table.</i>";
                 }
-
                 $("#cooldownList").html(html);
-                $("#toggleGlobalCooldown").html(modeIcon[globalCooldown]);
-                $("#togglePerUserCooldown").html(modeIcon[perUserCooldown]);
+            }
+
+            if (panelCheckQuery(msgObject, 'commands_cooldownsettings')) {
+                for (idx in msgObject['results']) {
+                    commandName = msgObject['results'][idx]['key'];
+                    time = msgObject['results'][idx]['value'];
+
+                    if (panelMatch(commandName, 'modCooldown')) {
+                        modCooldown = msgObject['results'][idx]['value'];
+                        continue;
+                    }
+
+                    if (panelMatch(commandName, 'defaultCooldownTime')) {
+                        $('#defaultCooldownInput').val(msgObject['results'][idx]['value']);
+                        continue;
+                    }
+                }
                 $("#toggleModCooldown").html(modeIcon[modCooldown]);
-                $('#globalCooldownTimeInput').attr('placeholder', globalCooldownTime).blur();
             }
 
             if (panelCheckQuery(msgObject, 'commands_cooldownmsg')) {
@@ -141,6 +139,7 @@
 
                 html = '<table>';
                 commands.splice(0);
+                msgObject['results'].sort(sortCommandTable);
                 for (var idx in msgObject['results']) {
                     commandName = msgObject['results'][idx]['key'];
                     commandNameSafe = commandName.replace(/\?/g, '__QM__');
@@ -151,10 +150,10 @@
                             '    <td style="width: 15%">!' + commandName + '</td>' +
                             '    <td style="vertical-align: middle">' +
                             '        <form onkeypress="return event.keyCode != 13">' +
-                            '            <input style="width: 85%" type="text" id="editCommand_' + commandNameSafe + '"' +
+                            '            <input style="width: 85%" type="text" class="input-control" id="editCommand_' + commandNameSafe.replace(/[^a-zA-Z0-9_]/g, '_SP_')  + '"' +
                             '                   value="' + commandValue + '" />' +
-                            '              <button type="button" class="btn btn-default btn-xs" onclick="$.editCustomCommand(\'' + commandName + '\')"><i class="fa fa-pencil" /> </button> ' +
-                            '              <button type="button" class="btn btn-default btn-xs" id="deleteCommand_' + commandNameSafe + '" onclick="$.deleteCommand(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
+                            '              <button type="button" class="btn btn-default btn-xs" onclick="$.editCustomCommand(\'' + commandName + '\')"><i class="fa fa-hdd-o" /> </button> ' +
+                            '              <button type="button" class="btn btn-default btn-xs" id="deleteCommand_' + commandNameSafe.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '" onclick="$.deleteCommand(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
                             '             </form>' +
                             '        </form>' +
                             '    </td>' +
@@ -170,12 +169,14 @@
                     $('#aliasCommandsList').html('<i>There are no aliased commands defined.</i>');
                     return;
                 }
+
+                msgObject['results'].sort(sortCommandTable);
                 for (idx in msgObject['results']) {
                     commandName = msgObject['results'][idx]['key'];
                     commandValue = msgObject['results'][idx]['value'];
                     html += "<tr class=\"textList\">" +
                             "    <td style=\"width: 5%\">" +
-                            "        <div id=\"deleteAlias_" + commandName + "\" type=\"button\" class=\"btn btn-default btn-xs\" " +
+                            "        <div id=\"deleteAlias_" + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + "\" type=\"button\" class=\"btn btn-default btn-xs\" " +
                             "             onclick=\"$.deleteAlias('" + commandName + "')\"><i class=\"fa fa-trash\" />" +
                             "        </div>" +
                             "    </td>" +
@@ -194,6 +195,7 @@
                     $('#priceCommandsList').html('<i>There are no commands with prices defined.</i>');
                     return;
                 }
+                msgObject['results'].sort(sortCommandTable);
                 for (idx in msgObject['results']) {
                     commandName = msgObject['results'][idx]['key'];
                     commandValue = msgObject['results'][idx]['value'];
@@ -201,10 +203,10 @@
                     '    <td style="width: 10%">!' + commandName + '</td>' +
                     '    <td style="vertical-align: middle">' +
                     '        <form onkeypress="return event.keyCode != 13">' +
-                    '            <input style="width: 60%" type="text" id="editCommandPrice_' + commandName + '"' +
+                    '            <input style="width: 60%" type="text" class="input-control" id="editCommandPrice_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '"' +
                     '                   value="' + commandValue + '" />' +
-                    '              <button type="button" class="btn btn-default btn-xs" onclick="$.updateCommandPrice(\'' + commandName + '\')"><i class="fa fa-pencil" /> </button> ' +
-                    '              <button type="button" class="btn btn-default btn-xs" id="deleteCommandPrice_' + commandName + '" onclick="$.deleteCommandPrice(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
+                    '              <button type="button" class="btn btn-default btn-xs" onclick="$.updateCommandPrice(\'' + commandName + '\')"><i class="fa fa-hdd-o" /> </button> ' +
+                    '              <button type="button" class="btn btn-default btn-xs" id="deleteCommandPrice_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '" onclick="$.deleteCommandPrice(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
                     '             </form>' +
                     '        </form>' +
                     '    </td>' +
@@ -215,11 +217,39 @@
                 handleInputFocus();
             }
 
+            if (panelCheckQuery(msgObject, 'commands_count')) {
+                if (msgObject['results'].length === 0) {
+                    $('#countCommandsList').html('<i>There are no commands with counters defined.</i>');
+                    return;
+                }
+                msgObject['results'].sort(sortCommandTable);
+                for (idx in msgObject['results']) {
+                    commandName = msgObject['results'][idx]['key'];
+                    commandValue = msgObject['results'][idx]['value'];
+                    html += '<tr style="textList">' +
+                        '    <td style="width: 10%">!' + commandName + '</td>' +
+                        '    <td style="vertical-align: middle">' +
+                        '        <form onkeypress="return event.keyCode != 13">' +
+                        '            <input style="width: 60%" type="text" class="input-control" id="resetCommandCount_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '"' +
+                        '                   value="' + commandValue + '" readonly/>' +
+                        '              <button type="button" class="btn btn-default btn-xs" data-toggle="tooltip" title="Reset Count to 0." onclick="$.resetCommandCount(\'' + commandName + '\')"><i class="fa fa-undo" /> </button> ' +
+                        '              <button type="button" class="btn btn-default btn-xs" id="deleteCommandCount_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '" data-toggle="tooltip" title="Removes Current Counter." onclick="$.deleteCommandCount(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
+                        '             </form>' +
+                        '        </form>' +
+                        '    </td>' +
+                        '</tr>';
+                }
+                html += "</table>";
+                $("#countCommandsList").html(html);
+                handleInputFocus();
+            }
+
             if (panelCheckQuery(msgObject, 'commands_payment')) {
                 if (msgObject['results'].length === 0) {
                     $('#payCommandsList').html('<i>There are no commands with payments defined.</i>');
                     return;
                 }
+                msgObject['results'].sort(sortCommandTable);
                 for (idx in msgObject['results']) {
                     commandName = msgObject['results'][idx]['key'];
                     commandValue = msgObject['results'][idx]['value'];
@@ -227,10 +257,10 @@
                     '    <td style="width: 10%">!' + commandName + '</td>' +
                     '    <td style="vertical-align: middle">' +
                     '        <form onkeypress="return event.keyCode != 13">' +
-                    '            <input style="width: 60%" type="text" id="editCommandPay_' + commandName + '"' +
+                    '            <input style="width: 60%" type="text" class="input-control" id="editCommandPay_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '"' +
                     '                   value="' + commandValue + '" />' +
-                    '              <button type="button" class="btn btn-default btn-xs" onclick="$.updateCommandPay(\'' + commandName + '\')"><i class="fa fa-pencil" /> </button> ' +
-                    '              <button type="button" class="btn btn-default btn-xs" id="deleteCommandPay_' + commandName + '" onclick="$.deleteCommandPay(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
+                    '              <button type="button" class="btn btn-default btn-xs" onclick="$.updateCommandPay(\'' + commandName + '\')"><i class="fa fa-hdd-o" /> </button> ' +
+                    '              <button type="button" class="btn btn-default btn-xs" id="deleteCommandPay_' + commandName.replace(/[^a-zA-Z0-9_]/g, '_SP_') + '" onclick="$.deleteCommandPay(\'' + commandName + '\')"><i class="fa fa-trash" /> </button>' +
                     '             </form>' +
                     '        </form>' +
                     '    </td>' +
@@ -250,12 +280,15 @@
             }
 
             if (panelCheckQuery(msgObject, 'commands_permcom')) {
-                var commandTableData = msgObject['results'];
+                var commandTableData = msgObject['results'],
+                    botCommandsNew = [];
+
                 commandTableData.sort(sortCommandTable);
 
                 for (idx in commandTableData) {
                     commandName = commandTableData[idx]['key'];
                     commandValue = commandTableData[idx]['value'];
+                    botCommandsNew.push(commandName);
                     html += "<tr class=\"textList\">" +
                             "<td><strong>" + commandName + "</strong></td>";
 
@@ -263,17 +296,17 @@
                         if (disabledCommands[commandName] !== undefined) {
                             html +=  "<td><div id=\"commandEnabled_" + commandName + "\"" +
                                      "         data-toggle=\"tooltip\" title=\"Enable Command\" class=\"button\" onclick=\"$.commandEnable('" + commandName + "', 'enable');\">" +
-                                     "    <i style=\"color: #6136b1\" class=\"fa fa-toggle-off\" /></div></td>";
+                                     "    <i style=\"color: var(--main-color)\" class=\"fa fa-toggle-off\" /></div></td>";
                         } else {
                             html +=  "<td><div id=\"commandEnabled_" + commandName + "\"" +
                                      "         data-toggle=\"tooltip\" title=\"Disable Command\" class=\"button\" onclick=\"$.commandEnable('" + commandName + "', 'disable');\">" +
-                                     "    <i style=\"color: #6136b1\" class=\"fa fa-toggle-on\" /></div></td>";
+                                     "    <i style=\"color: var(--main-color)\" class=\"fa fa-toggle-on\" /></div></td>";
                         }
                     } else {
                         html += "<td />";
                     }
 
-                    html += "<td /><td><div id=\"commandsList_" + commandName + "\"><strong><font style=\"color: #6136b1\">" + groupIcons[commandValue] + 
+                    html += "<td /><td><div id=\"commandsList_" + commandName + "\"><strong><font style=\"color: var(--main-color)\">" + groupIcons[commandValue] +
                             "    </font></strong></div></td>" +
 
                             "<td><div data-toggle=\"tooltip\" title=\"Set Caster\" class=\"button\" onclick=\"$.commandPermission('" + commandName + "', 0);\">" +
@@ -299,6 +332,7 @@
 
                             "</tr>";
                 }
+                botCommands = botCommandsNew.slice();
                 html += "</table>";
                 $("#permCommandsList").html(html);
                 $('[data-toggle="tooltip"]').tooltip();
@@ -313,8 +347,10 @@
         sendDBKeys("commands_commands", "command");
         sendDBKeys("commands_aliases", "aliases");
         sendDBKeys("commands_pricecom", "pricecom");
+        sendDBKeys("commands_count", "commandCount");
         sendDBKeys("commands_payment", "paycom");
         sendDBKeys("commands_cooldown", "cooldown");
+        sendDBKeys("commands_cooldownsettings", "cooldownSettings");
         sendDBKeys("commands_disabled", "disabledCommands");
         sendDBQuery("commands_cooldownmsg", "settings", "coolDownMsgEnabled");
         sendDBQuery("commands_permcommsg", "settings", "permComMsgEnabled");
@@ -329,12 +365,12 @@
         return panelStrcmp(a.key, b.key);
     };
 
-    /** 
+    /**
      * @function deleteCommand
      * @param {String} command
      */
     function deleteCommand(command) {
-        $("#deleteCommand_" + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteCommand_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         command = command.toLowerCase();
         sendDBDelete("commands_delcom_" + command, "command", command);
         sendDBDelete("commands_delcompermcom_" + command, "permcom", command);
@@ -342,27 +378,50 @@
         sendDBDelete("commands_delcompermcom_" + command, "permcom", command);
         sendDBDelete("commands_delcomalias_" + command, "aliases", command);
         sendDBDelete("commands_delcomcooldown_" + command, "cooldown", command);
+        sendWSEvent('commands', './commands/customCommands.js', null, ['remove', command]);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand("reloadcommand " + command); }, TIMEOUT_WAIT_TIME);
     };
 
-    /** 
+    /**
      * @function deleteCommandPrice
      * @param {String} command
      */
     function deleteCommandPrice(command) {
-        $("#deleteCommandPrice_" + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteCommandPrice_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBDelete("commands_delcomprice_" + command, "pricecom", command);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand("reloadcommand") }, TIMEOUT_WAIT_TIME);
     };
 
-    /** 
+    /**
+     * @function deleteCommandCount
+     * @param {String} command
+     */
+    function deleteCommandCount(command) {
+        $("#deleteCommandCount_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
+        sendDBDelete("commands_delcomcount_" + command, "commandCount", command);
+        setTimeout(function () { doQuery(); }, TIMEOUT_WAIT_TIME);
+        setTimeout(function () { sendCommand("reloadcommand") }, TIMEOUT_WAIT_TIME);
+    };
+
+    /**
+    * @function resetCommandCount
+    * @param {String} command
+    */
+    function resetCommandCount(command) {
+        $('#resetCommandCount_' + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
+        sendDBUpdate('commands_editcount_' + command, 'commandCount', command.toLowerCase(), '0');
+        setTimeout(function () { doQuery(); }, TIMEOUT_WAIT_TIME);
+        setTimeout(function () { sendCommand("reloadcommand") }, TIMEOUT_WAIT_TIME);
+    }
+
+    /**
      * @function deleteCommandPay
      * @param {String} command
      */
     function deleteCommandPay(command) {
-        $("#deleteCommandPay_" + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteCommandPay_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBDelete("commands_delcompay_" + command, "paycom", command);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand("reloadcommand") }, TIMEOUT_WAIT_TIME);
@@ -385,22 +444,28 @@
             $('#addCommandCommand').val('');
             setTimeout(function() { $('#addCommandText').val(''); }, TIMEOUT_WAIT_TIME * 10);
             return;
-        } else if (command.match(/ /)) {
+        } else if (command.match(/\s+/)) {
             $('#addCommandCommand').val('[ERROR] Your command cannot contain a space.');
             $('#addCommandText').val('');
             setTimeout(function() { $('#addCommandCommand').val(''); }, TIMEOUT_WAIT_TIME * 10);
             return;
-        } else if (command.startsWith('!')) {
-            command = command.replace('!', '');
+        } else if (botCommands.indexOf(command.replace('!', '')) !== -1) {
+            $('#addCommandCommand').val('[ERROR] Command already exists.');
+            $('#addCommandText').val('');
+            setTimeout(function() { $('#addCommandCommand').val(''); }, TIMEOUT_WAIT_TIME * 10);
+            return;
         }
 
-        $('#addCommandText').val('Command successfully added!'); 
+        command = command.replace('!', '');
+
+        $('#addCommandText').val('Command successfully added!');
         sendDBUpdate('addCustomCommand', 'command', command.toLowerCase(), commandText);
-        setTimeout(function() { 
-            $('#addCommandText').val(''); 
-            $('#addCommandCommand').val(''); 
-            sendCommand('reloadcommand'); 
-            doQuery(); 
+        sendWSEvent('commands', './commands/customCommands.js', null, ['add', command, commandText]);
+        setTimeout(function() {
+            $('#addCommandText').val('');
+            $('#addCommandCommand').val('');
+            sendCommand('reloadcommand');
+            doQuery();
         }, TIMEOUT_WAIT_TIME);
     };
 
@@ -409,40 +474,25 @@
      * @param {String} command
      */
     function editCustomCommand(command) {
-    var value = $('#editCommand_' + command.replace(/\?/g, '__QM__')).val();
+    var value = $('#editCommand_' + command.replace(/\?/g, '__QM__').replace(/[^a-zA-Z0-9_]/g, '_SP_')).val();
     value = value.replace(/''/g, '"');
         if (value.length > 0) {
+            command = command.replace('!', '');
             sendDBUpdate("addCustomCommand", "command", command.toLowerCase(), value);
+            sendWSEvent('commands', './commands/customCommands.js', null, ['edit', command.toLowerCase(), value]);
             setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
             setTimeout(function() { sendCommand("reloadcommand"); }, TIMEOUT_WAIT_TIME);
         }
     };
 
     /**
-     * @function editCooldown
-     * @param {String} command
-     */
-    function editCooldown(command) {
-        var value = $('#editCommandCooldown_' + command).val();
-        if (value > 0) {
-            sendDBUpdate("commands_cooldown_edit", "cooldown", command.toLowerCase(), value);
-            setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
-        }
-    };
-
-    /** 
      * @function aliasCommand
      */
     function aliasCommand() {
         var main = $('#aliasCommandInput').val();
         var alias = $('#aliasCommandInputAlias').val();
 
-        if (main.match(/;/) || main.match(/-/) || main.match(/ /)) {
-            $("#aliasCommandInputAlias").val("[ERROR] Alias name can not contain special symbols, or spaces.");
-            $("#aliasCommandInput").val("");
-            setTimeout(function() { $('#aliasCommandInputAlias').val(""); }, TIMEOUT_WAIT_TIME * 10);
-            return;
-        } else if (alias.length == 0) {
+        if (alias.length == 0) {
             $("#aliasCommandInputAlias").val("[ERROR] Please enter a value.");
             setTimeout(function() { $("#aliasCommandInputAlias").val(""); }, TIMEOUT_WAIT_TIME * 2);
             return;
@@ -452,12 +502,8 @@
             return;
         }
 
-        if (main.startsWith('!')) {
-            main = main.replace('!', '');
-        } else if (alias.startsWith('!')) {
-            alias = alias.replace('!', '');
-        }
-
+        alias = alias.replace('!', '');
+        main = main.replace('!', '');
         sendDBUpdate("addCommandAlias", "aliases", main.toLowerCase(), alias.toLowerCase());
         setTimeout(function() { $('#aliasCommandInput').val(""); $('#aliasCommandInputAlias').val(""); sendCommand("reloadcommand"); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
@@ -468,8 +514,9 @@
      * @param {String} command
      */
     function deleteAlias(command) {
-        $("#deleteAlias_" + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteAlias_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (command.length != 0) {
+            command = command.replace('!', '');
             sendDBDelete("commands_delalias_" + command, "aliases", command);
         }
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
@@ -480,8 +527,9 @@
      * @function commandPermission
      */
     function commandPermission(command, group) {
-        $("#commandsList_" + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#commandsList_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (command.length != 0 && group.length != 0) {
+            command = command.replace('!', '');
             sendCommand('permcomsilent ' + command.toLowerCase() + ' ' + String(group))
             //sendDBUpdate("commands_permcom", "permcom", command.toLowerCase(), String(group));
         }
@@ -531,8 +579,8 @@
      * @function updateCommandPrice
      */
     function updateCommandPrice(command) {
-        var val = $('#editCommandPrice_' + command).val();
-        $('#editCommandPrice_' + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        var val = $('#editCommandPrice_' + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).val();
+        $('#editCommandPrice_' + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (val > 0) {
             sendDBUpdate("commands_editprice_" + command, "pricecom", command.toLowerCase(), val);
             setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
@@ -544,8 +592,8 @@
      * @function updateCommandPay
      */
     function updateCommandPay(command) {
-        var val = $('#editCommandPay_' + command).val();
-        $('#editCommandPay_' + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        var val = $('#editCommandPay_' + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).val();
+        $('#editCommandPay_' + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (val.length > 0) {
             sendDBUpdate("commands_editpay_" + command, "paycom", command.toLowerCase(), val);
             setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
@@ -554,24 +602,10 @@
     };
 
     /**
-     * @function toggleGlobalCooldown
-     */
-    function toggleGlobalCooldown() {
-        $("#toggleGlobalCooldown").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
-        if (globalCooldown == "true") {
-            sendDBUpdate("commands_cooldown_toggle", "cooldown", "globalCooldown", "false");
-        } else if (globalCooldown == "false") {
-            sendDBUpdate("commands_cooldown_toggle", "cooldown", "globalCooldown", "true");
-        }
-        setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
-        setTimeout(function() { sendCommand("reloadcooldown"); }, TIMEOUT_WAIT_TIME * 2);
-    };
-
-    /**
      * @function toggleCooldownMsg
      */
     function toggleCooldownMsg() {
-        $("#cooldownMsg").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#cooldownMsg").html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (cooldownMsg == "true") {
             sendDBUpdate("commands_cooldownmsg", "settings", "coolDownMsgEnabled", "false");
         } else if (cooldownMsg == "false") {
@@ -584,7 +618,7 @@
      * @function togglePermcomMsg
      */
     function togglePermcomMsg() {
-        $("#permcomMsg").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#permcomMsg").html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (permcomMsg == "true") {
             sendDBUpdate("commands_permcommsg", "settings", "permComMsgEnabled", "false");
         } else if (permcomMsg == "false") {
@@ -597,46 +631,26 @@
      * @function toggleModCooldown
      */
     function toggleModCooldown() {
-        $("#toggleModCooldown").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#toggleModCooldown").html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (modCooldown == "true") {
-            sendDBUpdate("commands_cooldown_toggle", "cooldown", "modCooldown", "false");
+            sendDBUpdate("commands_cooldown_toggle", "cooldownSettings", "modCooldown", "false");
         } else if (modCooldown == "false") {
-            sendDBUpdate("commands_cooldown_toggle", "cooldown", "modCooldown", "true");
+            sendDBUpdate("commands_cooldown_toggle", "cooldownSettings", "modCooldown", "true");
+
         }
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
-        setTimeout(function() { sendCommand("reloadcooldown"); }, TIMEOUT_WAIT_TIME * 2);
+        setTimeout(function() { sendWSEvent('cooldown', './core/commandCoolDown.js', null, ['update']); }, TIMEOUT_WAIT_TIME * 2);
     };
-
-    /**
-     * @function togglePerUserCooldown
-     */
-    function togglePerUserCooldown() {
-        $("#togglePerUserCooldown").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
-        if (perUserCooldown == "true") {
-            sendDBUpdate("commands_cooldown_toggle", "cooldown", "perUserCooldown", "false");
-        } else if (perUserCooldown == "false") {
-            sendDBUpdate("commands_cooldown_toggle", "cooldown", "perUserCooldown", "true");
-        }
-        setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
-        setTimeout(function() { sendCommand("reloadcooldown"); }, TIMEOUT_WAIT_TIME * 2);
-    }
-
 
     /**
      * @function setGlobalCooldownTime
      */
-    function setGlobalCooldownTime() {
-        var newValue = $("#globalCooldownTimeInput").val();
-        if (newValue.length > 0) {
-            sendDBUpdate("commands_cooldown_time", "cooldown", "globalCooldownTime", String(newValue));
-            $("#globalCooldownTimeInput").val('');
-            $("#globalCooldownTimeInput").attr('placeholder', newValue).blur();
-            setTimeout(function() { sendCommand("reloadcooldown"); }, TIMEOUT_WAIT_TIME * 2);
-            setTimeout(function() { 
-                doQuery();  
-                $("#globalCooldownTimeInput").attr('placeholder', newValue).blur();
-                $("#globalCooldownTimeInput").val('');
-            }, TIMEOUT_WAIT_TIME * 2);
+    function setDefaultCooldown() {
+        var newValue = parseInt($("#defaultCooldownInput").val());
+        if (!isNaN(newValue) && newValue >= 5) {
+            sendDBUpdate("commands_cooldown_time", "cooldownSettings", "defaultCooldownTime", String(newValue));
+            setTimeout(function() { sendWSEvent('cooldown', './core/commandCoolDown.js', null, ['update']); }, TIMEOUT_WAIT_TIME * 2);
+            setTimeout(function() { doQuery();  }, TIMEOUT_WAIT_TIME * 2);
         }
     }
 
@@ -645,8 +659,9 @@
      * @param {String} command
      */
     function deleteCooldown(command) {
-        $("#deleteCooldown_" + command).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#deleteCooldown_" + command.replace(/[^a-zA-Z0-9_]/g, '_SP_')).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBDelete("commands_cooldown_delete", "cooldown", command);
+        sendWSEvent('cooldown', './core/commandCoolDown.js', null, ['remove', command]);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     }
 
@@ -656,18 +671,30 @@
     function addCooldown() {
         var input = $("#cooldownCmdInput").val();
         var command = $("#cooldownCmdInputCommand").val();
+        var checked = $("#globalCooldownCheck").is(':checked');
 
         if (command.startsWith('!')) {
             command = command.replace('!', '');
         }
-        
-        if (input.length > 0 && command.length != 0) {
-            sendDBUpdate("commands_cooldown_add", "cooldown", String(command), String(input));
-            $("#cooldownCmdInput").val("Submitted");
-            $("#cooldownCmdInputCommand").val("Submitted");
-            setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
-            setTimeout(function() { $("#cooldownCmdInputCommand").val(""); $("#cooldownCmdInput").val(""); }, TIMEOUT_WAIT_TIME);
+
+        if (command.match(/\s/)) {
+            $("#cooldownCmdInputCommand").val("Cooldowns cannot have a space, please set the cooldown on the default command.");
+            setTimeout(function() { $("#cooldownCmdInputCommand").val(""); $("#cooldownCmdInput").val(""); $("#globalCooldownCheck").prop('checked', true); }, TIMEOUT_WAIT_TIME * 3);
+            return;
         }
+
+        if (input.length > 0 && command.length != 0) {
+            sendDBUpdate("commands_cooldown_add", "cooldown", String(command), JSON.stringify({command: String(command.toLowerCase()), seconds: String(input), isGlobal: String(checked)}));
+            setTimeout(function() { doQuery(); sendWSEvent('cooldown', './core/commandCoolDown.js', null, ['add', command.toLowerCase(), input, checked]); }, TIMEOUT_WAIT_TIME);
+            setTimeout(function() { $("#cooldownCmdInputCommand").val(""); $("#cooldownCmdInput").val(""); $("#globalCooldownCheck").prop('checked', true); }, 5);
+        }
+    }
+
+    function editCooldown(command, time, global) {
+        $("#cooldownCmdInput").val(time);
+        $("#cooldownCmdInputCommand").val(command);
+        $("#cooldownCmdInputCommand").focus();
+        $("#globalCooldownCheck").prop('checked', global == 'true');
     }
 
     /**
@@ -691,7 +718,7 @@
     /**
      * @function runCommand
      */
-    function runCommand() {
+    function runCustomCommand() {
         var val = $('#commandImput').val();
 
         if (val.length == 0) {
@@ -699,7 +726,7 @@
             return;
         }
 
-        sendCommand(val);
+        sendCommand(val.replace('!', ''));
         $('#commandImput').val('command sent!');
         setTimeout(function() { $('#commandImput').val('') }, TIMEOUT_WAIT_TIME);
     }
@@ -739,19 +766,19 @@
     $.setCommandPrice = setCommandPrice;
     $.setCommandPay = setCommandPay;
     $.updateCommandPrice = updateCommandPrice;
+    $.deleteCommandCount = deleteCommandCount;
+    $.resetCommandCount = resetCommandCount;
     $.updateCommandPay = updateCommandPay;
     $.addCooldown = addCooldown;
     $.deleteCooldown = deleteCooldown;
-    $.toggleGlobalCooldown = toggleGlobalCooldown;
     $.toggleModCooldown = toggleModCooldown;
-    $.togglePerUserCooldown = togglePerUserCooldown;
-    $.setGlobalCooldownTime = setGlobalCooldownTime;
+    $.setDefaultCooldown = setDefaultCooldown;
     $.commandEnable = commandEnable;
     $.deleteCommandPrice = deleteCommandPrice;
     $.deleteCommandPay = deleteCommandPay;
-    $.editCooldown = editCooldown;
     $.commands = commands;
-    $.runCommand = runCommand;
+    $.runCustomCommand = runCustomCommand;
     $.toggleCooldownMsg = toggleCooldownMsg;
     $.togglePermcomMsg = togglePermcomMsg;
+    $.editCooldown = editCooldown;
 })();

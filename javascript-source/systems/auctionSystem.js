@@ -1,22 +1,39 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 (function() {
     var auction = {
-        increments: 0,
-        minimum: 0,
-        topUser: 0,
-        topPoints: 0,
-        timer: 0,
-        status: false,
-    },
-    a,
-    b;
+            increments: 0,
+            minimum: 0,
+            topUser: 0,
+            topPoints: 0,
+            timer: 0,
+            status: false,
+        },
+        a,
+        b;
 
     /**
      * @function openAuction
      *
-     * @param {string} user 
-     * @param {int} increments 
-     * @param {int} minimum 
-     * @param {int} timer 
+     * @param {string} user
+     * @param {int} increments
+     * @param {int} minimum
+     * @param {int} timer
      */
     function openAuction(user, increments, minimum, timer) {
         if (auction.status) {
@@ -56,12 +73,13 @@
                 clearInterval(b);
             }, timer * 1000);
         }
+        $.inidb.set('auctionSettings', 'isActive', 'true');
     };
 
     /**
      * @function closeAuction
      *
-     * @param {string} user 
+     * @param {string} user
      */
     function closeAuction(user) {
         if (!auction.status) {
@@ -81,15 +99,16 @@
         auction.status = false;
         $.inidb.decr('points', auction.topUser, auction.topPoints);
         $.say($.lang.get('auctionsystem.closed', auction.topUser, $.getPointsString(auction.topPoints)));
-        setTimeout(function () {
+        setTimeout(function() {
             resetAuction();
         }, 1000);
+        $.inidb.set('auctionSettings', 'isActive', 'false');
     };
 
     /**
      * @function warnAuction
      *
-     * @param {boolean} force 
+     * @param {boolean} force
      */
     function warnAuction(force, user) {
         if (!auction.status) {
@@ -107,8 +126,8 @@
     /**
      * @function bid
      *
-     * @param {string} user 
-     * @param {int} amount 
+     * @param {string} user
+     * @param {int} amount
      */
     function bid(user, amount) {
         if (!auction.status) {
@@ -116,11 +135,11 @@
             return;
         }
 
-        if (!parseInt(amount)) {
+        if (!(amount = parseInt(amount))) {
             $.say($.whisperPrefix(user) + $.lang.get('auctionsystem.bid.usage'));
             return;
         } else if (amount < auction.minimum) {
-            $.say($.lang.get('auctionsystem.err.bid.minimum', $.getPointsString(auction.topPoints)));
+            $.say($.lang.get('auctionsystem.err.bid.minimum', $.getPointsString(auction.minimum)));
             return;
         } else if (amount > $.getUserPoints(user)) {
             $.say($.whisperPrefix(user) + $.lang.get('auctionsystem.err.points', $.pointNameMultiple));
@@ -131,23 +150,26 @@
         }
 
         auction.topUser = user;
-        auction.topPoints = parseInt(amount);
+        auction.topPoints = amount;
 
         $.inidb.set('auctionresults', 'winner', auction.topUser);
         $.inidb.set('auctionresults', 'amount', auction.topPoints);
-
-        $.say($.lang.get('auctionsystem.bid', user, $.getPointsString(amount), $.getPointsString(auction.topPoints + auction.increments)))
     };
 
     /**
      * @function resetAuction
      */
     function resetAuction() {
+        clearInterval(a);
+        clearInterval(b);
         auction.increments = 0;
         auction.minimum = 0;
         auction.topUser = 0;
         auction.topPoints = 0;
         auction.timer = 0;
+        $.inidb.set('auctionSettings', 'isActive', 'false');
+        $.inidb.del('auctionresults', 'winner');
+        $.inidb.del('auctionresults', 'amount');
     };
 
     /**
@@ -183,6 +205,13 @@
             }
 
             /**
+             * @commandpath auction reset - Resets the auction.
+             */
+            if (action.equalsIgnoreCase('reset')) {
+                resetAuction();
+            }
+
+            /**
              * @commandpath auction warn - Shows the top bidder in an auction
              */
             if (action.equalsIgnoreCase('warn')) {
@@ -202,9 +231,9 @@
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./systems/auctionSystem.js')) {
-            $.registerChatCommand('./systems/auctionSystem.js', 'auction', 2);
-            $.registerChatCommand('./systems/auctionSystem.js', 'bid', 7);
-        }
+        $.registerChatCommand('./systems/auctionSystem.js', 'auction', 2);
+        $.registerChatCommand('./systems/auctionSystem.js', 'bid', 7);
+
+        $.inidb.set('auctionSettings', 'isActive', 'false');
     });
 })();

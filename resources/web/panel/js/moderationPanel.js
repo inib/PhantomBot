@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
@@ -24,7 +24,10 @@
  * Drives the Moderation Panel
  */
 (function() {
-    var spamTrackerLimit = 0;
+    var spamTrackerLimit = 0,
+        blacklist = [],
+        whitelist = [],
+        currentBlacklist = null;
 
     var modSettingIcon = [];
         modSettingIcon['false'] = "<i class=\"fa fa-circle-o\" />";
@@ -39,6 +42,7 @@
         modSettingMap['linksToggle'] = "Links Protection";
         modSettingMap['longMessageToggle'] = "Long Message Protection";
         modSettingMap['spamTrackerToggle'] = "Spam Tracker Protection";
+        modSettingMap['fakePurgeToggle'] = "Fake Purge Protection";
 
         modSettingMap['subscribersModerateLinks'] = "Subscriber " + modSettingMap['linksToggle'];
         modSettingMap['subscribersModerateCaps'] = "Subscriber " + modSettingMap['capsToggle'];
@@ -48,6 +52,7 @@
         modSettingMap['subscribersModerateColors'] = "Subscriber " + modSettingMap['colorsToggle'];
         modSettingMap['subscribersModerateLongMsg'] = "Subscriber " + modSettingMap['longMessageToggle'];
         modSettingMap['subscribersModerateSpamTracker'] = "Subscriber " + modSettingMap['spamTrackerToggle'];
+        modSettingMap['subscribersModerateFakePurge'] = "Subscriber " + modSettingMap['fakePurgeToggle'];
 
         modSettingMap['regularsModerateLinks'] = "Regulars " + modSettingMap['linksToggle'];
         modSettingMap['regularsModerateCaps'] = "Regulars " + modSettingMap['capsToggle'];
@@ -56,7 +61,8 @@
         modSettingMap['regularsModerateEmotes'] = "Regulars " + modSettingMap['emotesToggle'];
         modSettingMap['regularsModerateColors'] = "Regulars " + modSettingMap['colorsToggle'];
         modSettingMap['regularsModerateLongMsg'] = "Regulars " + modSettingMap['longMessageToggle'];
-        modSettingMap['subscribersModerateSpamTracker'] = "Regulars " + modSettingMap['spamTrackerToggle'];
+        modSettingMap['regularsModerateSpamTracker'] = "Regulars " + modSettingMap['spamTrackerToggle'];
+        modSettingMap['regularsModerateFakePurge'] = "Regulars " + modSettingMap['fakePurgeToggle'];
 
         modSettingMap['silentTimeoutLinks'] = "Silent Timeout on " + modSettingMap['linksToggle'];
         modSettingMap['silentTimeoutCaps'] = "Silent Timeout on " + modSettingMap['capsToggle'];
@@ -66,6 +72,7 @@
         modSettingMap['silentTimeoutColors'] = "Silent Timeout on " + modSettingMap['colorsToggle'];
         modSettingMap['silentTimeoutLongMsg'] = "Silent Timeout on " + modSettingMap['longMessageToggle'];
         modSettingMap['silentTimeoutSpamTracker'] = "Silent Timeout on " + modSettingMap['spamTrackerToggle'];
+        modSettingMap['silentTimeoutFakePurge'] = "Silent Timeout on " + modSettingMap['fakePurgeToggle'];
         modSettingMap['silentTimeoutBlacklist'] = "Silent Timeout on Blacklist";
 
     /**
@@ -104,24 +111,34 @@
 
             if (panelCheckQuery(msgObject, 'moderation_blacklist')) {
                 if (msgObject['results'].length > 0) {
-                    html = "<table>";
+                    html = '<table>';
+                    var i = 0;
+                    blacklist = [];
                     for (idx in msgObject['results']) {
+                        i++;
                         modSetting = msgObject['results'][idx]['key'];
                         modValue = msgObject['results'][idx]['value'];
 
-                        html += "<tr class=\"textList\">" +
-                            "    <td style=\"width: 3%\">" +
-                            "        <div id=\"delete_blackList_" + modSetting.replace(/![a-zA-Z1-9]/g, '__') + "\" type=\"button\" class=\"btn btn-default btn-xs\" " +
-                            "             onclick=\"$.deleteBlacklist('" + modSetting + "')\"><i class=\"fa fa-trash\" />" +
-                            "        </div>" +
-                            "    </td>" +
-                            "    <td>" + modValue + "</td>" +
-                            "</tr>";
-                    
+                        // html += "<tr class=\"textList\">" +
+                        //     "    <td style=\"width: 3%\">" +
+                        //     "        <div id=\"delete_blackList_" + modSetting.replace(/[^a-z1-9]/ig, '_') + "\" type=\"button\" class=\"btn btn-default btn-xs\" " +
+                        //     "             onclick=\"$.deleteBlacklist('" + modSetting.replace(/\\/g, '\\\\') + "')\"><i class=\"fa fa-trash\" />" +
+                        //     "        </div>" +
+                        //     "    </td>" +
+                        //     "    <td>" + modSetting + "</td>" +
+                        //     "</tr>";
+                        blacklist[i] = msgObject['results'][idx];
+                        html += '<tr>' +
+                        '<td>' + (modSetting.length > 80 ? modSetting.substring(0, 80) + '...' : modSetting) + '</td>' +
+                        '<td style="float: right;"><button type="button" class="btn btn-default btn-xs" onclick="$.openBlackListModal(\'' + i + '\')"><i class="fa fa-edit" /> </button>' +
+                        '<button type="button" id="delete_blackList_' + i + '" class="btn btn-default btn-xs" onclick="$.deleteBlacklist(\'' + i + '\')">'+
+                        '<i class="fa fa-trash" /> </button></td> ' +
+                        '</tr>';
+
                     }
-                    html += "</table>";
+                    html += '</table>';
                 } else {
-                    html = "<i>No entries in table.</i>";
+                    html = '<i>No entries in table.</i>';
                 }
                 $("#blacklistModSettings").html(html);
             }
@@ -132,14 +149,15 @@
                     for (idx in msgObject['results']) {
                         modSetting = msgObject['results'][idx]['key'];
                         modValue = msgObject['results'][idx]['value'];
-    
+
+                        whitelist[i] = msgObject['results'][idx]['key'];
                         html += "<tr class=\"textList\">" +
                                 "    <td style=\"width: 15px\" padding=\"5px\">" +
-                                "        <div id=\"delete_whiteList_" + modSetting.replace(".", "_") + "\" class=\"button\" " +
-                                "             onclick=\"$.deleteWhitelist('" + modSetting + "')\"><i class=\"fa fa-trash\" />" +
+                                "        <div id=\"delete_whiteList_" + i + "\" type=\"button\" class=\"btn btn-default btn-xs\"" +
+                                "             onclick=\"$.deleteWhitelist('" + i + "')\"><i class=\"fa fa-trash\" />" +
                                 "        </div>" +
                                 "    </td>" +
-                                "    <td>" + modValue + "</td>" +
+                                "    <td>" + modSetting + "</td>" +
                                 "</tr>";
                     }
                     html += "</table>";
@@ -178,7 +196,9 @@
                         case 'spamTrackerMessage' :
                         case 'spamTrackerLimit' :
                         case 'spamTrackerTime' :
-                            $("#" + modSetting + "Input").attr("placeholder", modValue).blur();
+                        case 'fakePurgeToggle' :
+                        case 'fakePurgeMessage' :
+                            $("#" + modSetting + "Input").val(modValue);
                             break;
                     }
 
@@ -195,124 +215,142 @@
                     modValue = msgObject['results'][idx]['value'];
 
                     if (panelMatch(modSetting, 'warningTimeLinks')) {
-                        $("#warningTimeLinks").attr("placeholder", modValue).blur();
+                        $("#warningTimeLinks").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeLinks')) {
-                        $("#timeoutTimeLinks").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeLinks").val(modValue);
+                    }
+
+                    if (panelMatch(modSetting, 'warningTimeFakePurge')) {
+                        $("#warningTimeFakePurge").val(modValue);
+                    }
+
+                    if (panelMatch(modSetting, 'timeoutTimeFakePurge')) {
+                        $("#timeoutTimeFakePurge").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeCaps')) {
-                        $("#warningTimeCaps").attr("placeholder", modValue).blur();
+                        $("#warningTimeCaps").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeCaps')) {
-                        $("#timeoutTimeCaps").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeCaps").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeSymbols')) {
-                        $("#warningTimeSymbols").attr("placeholder", modValue).blur();
+                        $("#warningTimeSymbols").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeSymbols')) {
-                        $("#timeoutTimeSymbols").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeSymbols").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeSpam')) {
-                        $("#warningTimeSpam").attr("placeholder", modValue).blur();
+                        $("#warningTimeSpam").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeSpam')) {
-                        $("#timeoutTimeSpam").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeSpam").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeEmotes')) {
-                        $("#warningTimeEmotes").attr("placeholder", modValue).blur();
+                        $("#warningTimeEmotes").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeEmotes')) {
-                        $("#timeoutTimeEmotes").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeEmotes").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeColors')) {
-                        $("#warningTimeColors").attr("placeholder", modValue).blur();
+                        $("#warningTimeColors").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeColors')) {
-                        $("#timeoutTimeColors").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeColors").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeLongMsg')) {
-                        $("#warningTimeLongMsg").attr("placeholder", modValue).blur();
+                        $("#warningTimeLongMsg").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeLongMsg')) {
-                        $("#timeoutTimeLongMsg").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeLongMsg").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningTimeSpamTracker')) {
-                        $("#warningTimeSpamTracker").attr("placeholder", modValue).blur();
+                        $("#warningTimeSpamTracker").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'timeoutTimeSpamTracker')) {
-                        $("#timeoutTimeSpamTracker").attr("placeholder", modValue).blur();
+                        $("#timeoutTimeSpamTracker").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'blacklistTimeoutTime')) {
-                        $("#blacklistTimeoutTime").attr("placeholder", modValue).blur();
+                        $("#blacklistTimeoutTime").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'blacklistMessage')) {
-                        $("#blacklistMessage").attr("placeholder", modValue).blur();
+                        $("#blacklistMessage").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentLinkMessage')) {
-                        $("#LinkMessageReason").attr("placeholder", modValue).blur();
+                        $("#LinkMessageReason").val(modValue);
+                    }
+
+                    if (panelMatch(modSetting, 'silentFakePurgeMessage')) {
+                        $("#FakePurgeReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentSymbolsMessage')) {
-                        $("#SymbolMessageReason").attr("placeholder", modValue).blur();
+                        $("#SymbolMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentCapMessage')) {
-                        $("#CapMessageReason").attr("placeholder", modValue).blur();
+                        $("#CapMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentSpamMessage')) {
-                        $("#SpamMessageReason").attr("placeholder", modValue).blur();
+                        $("#SpamMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentLongMessage')) {
-                        $("#LongMessageReason").attr("placeholder", modValue).blur();
+                        $("#LongMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentColorMessage')) {
-                        $("#ColorMessageReason").attr("placeholder", modValue).blur();
+                        $("#ColorMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentEmoteMessage')) {
-                        $("#EmoteMessageReason").attr("placeholder", modValue).blur();
+                        $("#EmoteMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentBlacklistMessage')) {
-                        $("#BlacklistMessageReason").attr("placeholder", modValue).blur();
+                        $("#BlacklistMessageReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'silentSpamTrackerMessage')) {
-                        $("#SpamTrackerReason").attr("placeholder", modValue).blur();
+                        $("#SpamTrackerReason").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'msgCooldownSecs')) {
-                        $("#msgCooldownSec").attr("placeholder", modValue).blur();
+                        $("#msgCooldownSec").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'warningResetTime')) {
-                        $("#warningResetTime").attr("placeholder", modValue).blur();
+                        $("#warningResetTime").val(modValue);
                     }
 
                     if (panelMatch(modSetting, 'linksToggle')) {
                         if (panelMatch(modValue, 'true')) {
                             $('#toggleModerationLinks').attr('checked', 'checked');
+                        }
+                    }
+
+                    if (panelMatch(modSetting, 'fakePurgeToggle')) {
+                        if (panelMatch(modValue, 'true')) {
+                            $('#toggleModerationFakePurge').attr('checked', 'checked');
                         }
                     }
 
@@ -363,31 +401,43 @@
                             $('#toggleRegularLinks').attr('checked', 'checked');
                         }
                     }
-                
+
+                    if (panelMatch(modSetting, 'regularsModerateFakePurge')) {
+                        if (panelMatch(modValue, 'false')) {
+                            $('#toggleRegularFakePurge').attr('checked', 'checked');
+                        }
+                    }
+
                     if (panelMatch(modSetting, 'regularsModerateCaps')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleRegularCaps').attr('checked', 'checked');
                         }
                     }
-                
+
                     if (panelMatch(modSetting, 'regularsModerateSymbols')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleRegularSymbols').attr('checked', 'checked');
                         }
                     }
-                    
+
                     if (panelMatch(modSetting, 'regularsModerateSpam')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleRegularSpam').attr('checked', 'checked');
                         }
                     }
-                    
+
                     if (panelMatch(modSetting, 'regularsModerateColors')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleRegularColors').attr('checked', 'checked');
                         }
                     }
-                    
+
+                    if (panelMatch(modSetting, 'regularsModerateEmotes')) {
+                        if (panelMatch(modValue, 'false')) {
+                            $('#toggleRegularEmotes').attr('checked', 'checked');
+                        }
+                    }
+
                     if (panelMatch(modSetting, 'regularsModerateLongMsg')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleRegularLongMsg').attr('checked', 'checked');
@@ -405,31 +455,43 @@
                             $('#toggleSubscriberLinks').attr('checked', 'checked');
                         }
                     }
-                
+
+                    if (panelMatch(modSetting, 'subscribersModerateFakePurge')) {
+                        if (panelMatch(modValue, 'false')) {
+                            $('#toggleSubscriberFakePurge').attr('checked', 'checked');
+                        }
+                    }
+
                     if (panelMatch(modSetting, 'subscribersModerateCaps')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleSubscriberCaps').attr('checked', 'checked');
                         }
                     }
-                
+
                     if (panelMatch(modSetting, 'subscribersModerateSymbols')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleSubscriberSymbols').attr('checked', 'checked');
                         }
                     }
-                    
+
                     if (panelMatch(modSetting, 'subscribersModerateSpam')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleSubscriberSpam').attr('checked', 'checked');
                         }
                     }
-                    
+
                     if (panelMatch(modSetting, 'subscribersModerateColors')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleSubscriberColors').attr('checked', 'checked');
                         }
                     }
-                    
+
+                    if (panelMatch(modSetting, 'subscribersModerateEmotes')) {
+                        if (panelMatch(modValue, 'false')) {
+                            $('#toggleSubscriberEmotes').attr('checked', 'checked');
+                        }
+                    }
+
                     if (panelMatch(modSetting, 'subscribersModerateLongMsg')) {
                         if (panelMatch(modValue, 'false')) {
                             $('#toggleSubscriberLongMsg').attr('checked', 'checked');
@@ -445,6 +507,12 @@
                     if (panelMatch(modSetting, 'silentTimeoutLinks')) {
                         if (panelMatch(modValue, 'true')) {
                             $('#toggleSilentTimeoutLinks').attr('checked', 'checked');
+                        }
+                    }
+
+                    if (panelMatch(modSetting, 'silentTimeoutFakePurge')) {
+                        if (panelMatch(modValue, 'true')) {
+                            $('#toggleSilentTimeoutFakePurge').attr('checked', 'checked');
                         }
                     }
 
@@ -469,6 +537,12 @@
                     if (panelMatch(modSetting, 'silentTimeoutColors')) {
                         if (panelMatch(modValue, 'true')) {
                             $('#toggleSilentTimeoutColors').attr('checked', 'checked');
+                        }
+                    }
+
+                    if (panelMatch(modSetting, 'silentTimeoutEmotes')) {
+                        if (panelMatch(modValue, 'true')) {
+                            $('#toggleSilentTimeoutEmotes').attr('checked', 'checked');
                         }
                     }
 
@@ -504,17 +578,68 @@
     }
 
     /**
+     * @function openBlackListModal
+     */
+    function openBlackListModal(id) {
+        var obj = JSON.parse(blacklist[id]['value']);
+
+        currentBlacklist = (obj.isRegex && !obj.phrase.startsWith('regex:') ? ('regex:' + String(obj.phrase)) : String(obj.phrase));
+        $("#blacklistWord").val(obj.phrase);
+        $("#useRegex").prop("checked", obj.isRegex);
+        $("#blackList_message").val(obj.message);
+        $("#blacklistReason").val(obj.banReason);
+        $("#blacklistTimeout").val(obj.timeout);
+        $("#blacklist_regs").prop("checked", obj.excludeRegulars);
+        $("#blacklist_subs").prop("checked", obj.excludeSubscribers);
+        $("#blacklist_silent").prop("checked", obj.isSilent);
+        $("#blacklistModal").modal();
+    }
+
+    /**
      * @function addModBlacklist
      */
-    function addModBlacklist() {
-        var value = $("#addModBlacklistInput").val();
-        if (value.length > 0) {
-            sendDBUpdate("moderation_addBlacklist", "blackList", "phrase_" + value.toLowerCase(), value.toLowerCase());
-            $("#addModBlacklistInput").val("Submitted");
-            setTimeout(function() { $("#addModBlacklistInput").val(""); }, TIMEOUT_WAIT_TIME);
-            setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
-            setTimeout(function() { sendCommand("reloadmod"); }, TIMEOUT_WAIT_TIME);
+    function addModBlacklist(clear) {
+        if (clear === undefined) {
+            var phrase = $("#blacklistWord").val(),
+                isRegex = $("#useRegex").is(":checked"),
+                message = $("#blackList_message").val(),
+                banReason = $("#blacklistReason").val(),
+                timeout = $("#blacklistTimeout").val(),
+                hasRegs = $("#blacklist_regs").is(":checked"),
+                hasSubs = $("#blacklist_subs").is(":checked"),
+                isSilent = $("#blacklist_silent").is(":checked");
+
+            if (phrase.length > 0 && message.length > 0 && banReason.length > 0 && timeout.length > 0) {
+                var obj = {
+                    id: 'panel_' + phrase,
+                    timeout: String(timeout),
+                    isRegex: isRegex,
+                    phrase: (isRegex && !phrase.startsWith('regex:') ? ('regex:' + String(phrase)) : String(phrase)),
+                    isSilent: isSilent,
+                    excludeRegulars: hasRegs,
+                    excludeSubscribers: hasSubs,
+                    message: String(message),
+                    banReason: String(banReason)
+                };
+
+                if (currentBlacklist !== null && currentBlacklist.localeCompare((isRegex && !phrase.startsWith('regex:') ? ('regex:' + String(phrase)) : String(phrase))) !== 0) {
+                    sendDBDelete("commands_delblacklist_" + currentBlacklist, "blackList", String(currentBlacklist));
+                }
+                sendDBUpdate("moderation_addBlacklist", "blackList", (isRegex && !phrase.startsWith('regex:') ? ('regex:' + String(phrase)) : String(phrase)), JSON.stringify(obj));
+                currentBlacklist = null;
+                setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
+                setTimeout(function() { sendCommand("reloadmod"); }, TIMEOUT_WAIT_TIME);
+            }
         }
+
+        $("#blacklistWord").val('');
+        $("#useRegex").prop("checked", false);
+        $("#blackList_message").val('You were timed out for using a blacklisted word.');
+        $("#blacklistReason").val('Using a blacklisted word');
+        $("#blacklistTimeout").val('600');
+        $("#blacklist_regs").prop("checked", false);
+        $("#blacklist_subs").prop("checked", false);
+        $("#blacklist_silent").prop("checked", false);
     }
 
     /**
@@ -523,7 +648,7 @@
     function addModWhitelist() {
         var value = $("#addModWhitelistInput").val();
         if (value.length > 0) {
-            sendDBUpdate("moderation_addWhitelist", "whiteList", "link_" + value, value);
+            sendDBUpdate("moderation_addWhitelist", "whiteList", value.toLowerCase(), 'true');
             $("#addModWhitelistInput").val("Submitted");
             setTimeout(function() { $("#addModWhitelistInput").val(""); }, TIMEOUT_WAIT_TIME);
             setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
@@ -533,12 +658,13 @@
 
     /**
      * @function deleteBlacklist
-     * @param {String} key
+     * @param {Number} id
      */
-    function deleteBlacklist(key) {
+    function deleteBlacklist(id) {
         /* this was giving errors if it contained a symbol other then _ */
-        var newkey = key.replace(/:/g, '__').replace(/;/g, '__').replace('\'', '__').replace('"', '__').replace(/\[/g, '__').replace(/\\/g, '__').replace(/\//g, '__').replace(/\]/g, '__').replace('*', '__').replace('.', '__');
-        $("#delete_blackList_" + newkey).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        var key = blacklist[id]['key'];
+
+        $("#delete_blackList_" + id).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
 
         sendDBDelete("commands_delblacklist_" + key, "blackList", key);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
@@ -547,10 +673,11 @@
 
     /**
      * @function deleteWhitelist
-     * @param {String} key
+     * @param {Number} id
      */
-    function deleteWhitelist(key) {
-        $("#delete_whiteList_" + key.replace(".", "_")).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+    function deleteWhitelist(id) {
+        var key = whitelist[id];
+        $("#delete_whiteList_" + id).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBDelete("commands_delwhitelist_" + key, "whiteList", key);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand("reloadmod"); }, TIMEOUT_WAIT_TIME);
@@ -563,17 +690,17 @@
     function toggleModeration(group, type) {
         var modDbKeys = [];
         if (group.indexOf('viewers') === 0) {
-            modDbKeys = [ "linksToggle", "capsToggle", "spamToggle", "symbolsToggle", "emotesToggle", "longMessageToggle", "colorsToggle", "spamTrackerToggle" ];
+            modDbKeys = [ "linksToggle", "capsToggle", "spamToggle", "symbolsToggle", "emotesToggle", "longMessageToggle", "colorsToggle", "spamTrackerToggle", "fakePurgeToggle" ];
         }
 
         if (group.indexOf('subscribers') === 0) {
             modDbKeys = [ "subscribersModerateLinks", "subscribersModerateCaps", "subscribersModerateSymbols", "subscribersModerateSpam",
-                          "subscribersModerateEmotes", "subscribersModerateColors", "subscribersModerateLongMsg", "subscribersModerateSpamTacker" ];
+                          "subscribersModerateEmotes", "subscribersModerateColors", "subscribersModerateLongMsg", "subscribersModerateSpamTacker", "subscribersModerateFakePurge" ];
         }
 
         if (group.indexOf('regulars') === 0) {
             modDbKeys = [ "regularsModerateLinks", "regularsModerateCaps", "regularsModerateSymbols", "regularsModerateSpam",
-                          "regularsModerateEmotes", "regularsModerateColors", "regularsModerateLongMsg", "regularsModerateSpamTacker" ];
+                          "regularsModerateEmotes", "regularsModerateColors", "regularsModerateLongMsg", "regularsModerateSpamTacker", "regularsModerateFakePurge" ];
         }
 
         for (key in modDbKeys) {
@@ -668,7 +795,7 @@
     }
 
     /**
-     * @function permitUserCommand() 
+     * @function permitUserCommand()
      */
     function permitUserCommand() {
         sendCommand("permit " + $("#permitUserInput").val());
@@ -682,10 +809,10 @@
      * @param {String} newValue
      */
     function updateModSetting(tableKey, newValue) {
-        $("#modSetting_" + tableKey).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#modSetting_" + tableKey).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendDBUpdate("moderation_updateSetting_" + tableKey, "chatModerator", tableKey, newValue);
         setTimeout(function() {
-            $("#modSetting_" + tableKey).html("<strong><font style=\"color: #6136b1\">" + modSettingIcon[newValue] + "</font></strong>");
+            $("#modSetting_" + tableKey).html("<strong><font style=\"color: var(--main-color)\">" + modSettingIcon[newValue] + "</font></strong>");
         }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand("reloadmod"); }, TIMEOUT_WAIT_TIME);
     }
@@ -699,21 +826,18 @@
         var newValue = $(tagId).val();
 
         if (tableKey == 'msgCooldownSecs') {
-            if (newValue >= 45) {
+            if (newValue >= 30) {
                 sendDBUpdate("moderation_updateSetting_" + tableKey, "chatModerator", tableKey, newValue);
-                setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
-                setTimeout(function() { $(tagId).val(''); }, TIMEOUT_WAIT_TIME * 2);
                 setTimeout(function() { sendCommand("reloadmod"); }, TIMEOUT_WAIT_TIME);
             }
             return;
         }
 
-        if (newValue.length > 0 && newValue > 1) {
+        if (newValue.length > 0 && ((typeof newValue === 'number' && newValue > 1) || (typeof newValue === 'string'))) {
             sendDBUpdate("moderation_updateSetting_" + tableKey, "chatModerator", tableKey, newValue);
-            $(tagId).val('');
-            $(tagId).attr("placeholder", newValue).blur();
             setTimeout(function() { sendCommand("reloadmod"); }, TIMEOUT_WAIT_TIME);
         }
+        setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     }
 
     /**
@@ -831,4 +955,5 @@
     $.toggleSilentTimeout = toggleSilentTimeout;
     $.toggleModerations = toggleModerations;
     $.banReason = banReason;
+    $.openBlackListModal = openBlackListModal;
 })();

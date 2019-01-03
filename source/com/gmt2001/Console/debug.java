@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,31 +17,19 @@
 package com.gmt2001.Console;
 
 import com.gmt2001.Logger;
-import java.lang.StackTraceElement;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.TimeZone;
-import me.mast3rplan.phantombot.PhantomBot;
+import tv.phantombot.PhantomBot;
 
-public class debug {
+public final class debug {
 
-    private static final debug instance = new debug();
-
-    public static debug instance() {
-        return instance;
-    }
-    
     private debug() {
     }
 
     private debug(Object o) {
         if (PhantomBot.enableDebugging) {
-            String stackInfo = "";
-            String fullClassName = Thread.currentThread().getStackTrace()[2].getClassName();
-            String className = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+            String stackInfo;
             String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
             String fileName = Thread.currentThread().getStackTrace()[2].getFileName();
             int lineNumber = Thread.currentThread().getStackTrace()[2].getLineNumber();
@@ -50,13 +38,18 @@ public class debug {
 
             Logger.instance().log(Logger.LogType.Debug, "[" + logTimestamp.log() + "] " + stackInfo + o.toString());
             Logger.instance().log(Logger.LogType.Debug, "");
-            System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + stackInfo + o);
+            if (!PhantomBot.enableDebuggingLogOnly) {
+                System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + stackInfo + o);
+            }
         }
     }
 
     public static void println() {
         if (PhantomBot.enableDebugging) {
-            System.out.println();
+            Logger.instance().log(Logger.LogType.Debug, "");
+            if (!PhantomBot.enableDebuggingLogOnly) {
+                System.out.println();
+            }
         }
     }
 
@@ -64,47 +57,51 @@ public class debug {
         if (PhantomBot.enableDebugging) {
             Logger.instance().log(Logger.LogType.Debug, "[" + logTimestamp.log() + "] " + o.toString());
             Logger.instance().log(Logger.LogType.Debug, "");
-            System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + o);
+            if (!PhantomBot.enableDebuggingLogOnly) {
+                System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + o);
+            }
         }
     }
 
     public static void println(Object o) {
         if (PhantomBot.enableDebugging) {
-            String stackInfo = "";
-            String fullClassName = Thread.currentThread().getStackTrace()[2].getClassName();
-            String className = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+            String stackInfo;
             String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
             String fileName = Thread.currentThread().getStackTrace()[2].getFileName();
             int lineNumber = Thread.currentThread().getStackTrace()[2].getLineNumber();
 
+            stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
             Logger.instance().log(Logger.LogType.Debug, "[" + logTimestamp.log() + "] " + stackInfo + o.toString());
             Logger.instance().log(Logger.LogType.Debug, "");
 
-            stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
-            System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + stackInfo + o);
+            if (!PhantomBot.enableDebuggingLogOnly) {
+                System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + stackInfo + o);
+            }
         }
     }
 
     public static void println(Object o, Boolean force) {
         if (PhantomBot.enableDebugging || force) {
-            String stackInfo = "";
-            String fullClassName = Thread.currentThread().getStackTrace()[2].getClassName();
-            String className = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+            String stackInfo;
             String methodName = Thread.currentThread().getStackTrace()[2].getMethodName();
             String fileName = Thread.currentThread().getStackTrace()[2].getFileName();
             int lineNumber = Thread.currentThread().getStackTrace()[2].getLineNumber();
 
+            stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
             Logger.instance().log(Logger.LogType.Debug, "[" + logTimestamp.log() + "] " + stackInfo + o.toString());
             Logger.instance().log(Logger.LogType.Debug, "");
 
-            stackInfo = "[" +  methodName + "()@" + fileName + ":" + lineNumber + "] ";
-            System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + stackInfo + o);
+            if (!PhantomBot.enableDebuggingLogOnly) {
+                System.out.println("[" + logTimestamp.log() + "] [DEBUG] " + stackInfo + o);
+            }
         }
     }
 
     public static void printStackTrace(Throwable e) {
         if (PhantomBot.enableDebugging) {
-            e.printStackTrace(System.err);
+            if (!PhantomBot.enableDebuggingLogOnly) {
+                e.printStackTrace(System.err);
+            }
             logStackTrace(e);
         }
     }
@@ -113,9 +110,9 @@ public class debug {
         if (PhantomBot.enableDebugging) {
             Writer trace = new StringWriter();
             PrintWriter ptrace = new PrintWriter(trace);
-    
+
             e.printStackTrace(ptrace);
-    
+
             Logger.instance().log(Logger.LogType.Debug, "[" + logTimestamp.log() + "] " + trace.toString());
             Logger.instance().log(Logger.LogType.Debug, "");
         }

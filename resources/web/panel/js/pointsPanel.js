@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
@@ -28,8 +28,8 @@
     var sortType = 'alpha_asc',
         priceComMods = false,
         modeIcon = [];
-        modeIcon['false'] = "<i style=\"color: #6136b1\" class=\"fa fa-circle-o\" />";
-        modeIcon['true'] = "<i style=\"color: #6136b1\" class=\"fa fa-circle\" />";
+        modeIcon['false'] = "<i style=\"color: var(--main-color)\" class=\"fa fa-circle-o\" />";
+        modeIcon['true'] = "<i style=\"color: var(--main-color)\" class=\"fa fa-circle\" />";
 
     /*
      * onMessage
@@ -48,16 +48,16 @@
 
         if (panelHasQuery(msgObject)) {
             if (panelCheckQuery(msgObject, 'points_toplist')) {
-                $("#topListAmountPoints").attr("placeholder", msgObject['results']['topListAmountPoints']).blur();
+                $("#topListAmountPoints").val(msgObject['results']['topListAmountPoints']);
             }
             if (panelCheckQuery(msgObject, 'points_settings')) {
                 for (idx in msgObject['results']) {
                     var key = "",
                         value = "";
-    
+
                     key = msgObject['results'][idx]['key'];
                     value = msgObject['results'][idx]['value'];
-    
+
                     if (panelMatch(key, 'onlineGain')) {
                         $("#setPointGainInput_setgain").val(value);
                     } else if (panelMatch(key, 'offlineGain')) {
@@ -70,6 +70,10 @@
                         $("#setPointNameInput").val(value);
                     } else if (panelMatch(key, 'pointNameMultiple')) {
                         $("#setPointsNameInput").val(value);
+                    } else if (panelMatch(key, 'pointsMessage')) {
+                        $("#pointsMessageInput").val(value);
+                    } else if (panelMatch(key, 'activeBonus')) {
+                        $("#setPointGainInput_setactivebonus").val(value);
                     }
                 }
             }
@@ -84,7 +88,7 @@
                 $("#userPtsTableTitle").html("User Points Table (Refreshing <i class='fa fa-spinner fa-spin' aria-hidden='true'></i>)");
 
                 pointsTableData.sort(sortPointsTable_alpha_asc);
-                
+
                 html = "<table class='table' data-paging='true' data-paging-size='8'" +
                        "       data-filtering='true' data-filter-delay='200'" +
                        "       data-sorting='true'" +
@@ -97,18 +101,16 @@
                 for (var idx = 0; idx < pointsTableData.length; idx++) {
                     username = pointsTableData[idx]['key'];
                     points = pointsTableData[idx]['value'];
-                    html += "<tr onclick='$.copyUserPoints(\""+username+"\", \""+points+"\")' class='textList'>" +
-                            "    <td style='width: 50%'>" + username + "</td>" +
+                    html += "<tr onclick='$.copyUserPoints(\"" + username + "\", \"" + points + "\")' class='textList'>" +
+                            "    <td style='width: 50%; cursor: pointer;'>" + username + "</td>" +
                             "    <td style='width: 50%'>" + points + "</td>" +
                             "</tr>";
                 }
                 html += "</tbody></table>";
-                setTimeout(function () {
-                    $("#userPointsTable").html(html);
-                    $('.table').footable({
-                        'on': { 'postdraw.ft.table': function(e, ft) { $("#userPtsTableTitle").html("User Points Table"); } }
-                    });
-                }, 500);
+                $("#userPointsTable").html(html);
+                $('.table').footable({
+                    'on': { 'postdraw.ft.table': function(e, ft) { $("#userPtsTableTitle").html("User Points Table"); } }
+                });
                 handleInputFocus();
             }
 
@@ -143,19 +145,19 @@
                             "        </div>" +
                             "    <td style=\"width: 8em\">" + groupName + "</td>" +
                             "    <td><form onkeypress=\"return event.keyCode != 13\">" +
-                            "        <input type=\"number\" min=\"-1\" id=\"inlineGroupPointsEdit_" + groupName + "\"" +
+                            "        <input type=\"number\" min=\"-1\" class=\"input-control\" id=\"inlineGroupPointsEdit_" + groupName + "\"" +
                             "               value=\"" + groupPoints + "\" style=\"width: 5em\"/>" +
                             "        <button type=\"button\" class=\"btn btn-default btn-xs\"" +
-                            "               onclick=\"$.updateGroupPoints('" + groupName + "', true, false)\"><i class=\"fa fa-pencil\" />" +
+                            "               onclick=\"$.updateGroupPoints('" + groupName + "', true, false)\"><i class=\"fa fa-hdd-o\" />" +
                             "        </button>" +
                             "    </form></td>";
 
-                     if (groupPoints === '-1') {
-                         html += "<td style=\"float: right\"><i>Using Global Value</i></td>";
-                     } else {
-                         html += "<td />";
-                     }
-                     html += "</tr>";
+                    if (groupPoints === '-1') {
+                        html += "<td style=\"float: right\"><i>Using Global Value</i></td>";
+                    } else {
+                        html += "<td />";
+                    }
+                    html += "</tr>";
                 }
                 $("#groupPointsTable").html(html);
                 handleInputFocus();
@@ -183,19 +185,19 @@
                             "        </div>" +
                             "    <td style=\"width: 8em\">" + groupName + "</td>" +
                             "    <td><form onkeypress=\"return event.keyCode != 13\">" +
-                            "        <input type=\"number\" min=\"-1\" id=\"inlineGroupPointsOfflineEdit_" + groupName + "\"" +
+                            "        <input type=\"number\" min=\"-1\" class=\"input-control\" id=\"inlineGroupPointsOfflineEdit_" + groupName + "\"" +
                             "               value=\"" + groupPoints + "\" style=\"width: 5em\"/>" +
                             "        <button type=\"button\" class=\"btn btn-default btn-xs\"" +
-                            "               onclick=\"$.updateGroupPoints('" + groupName + "', false, false)\"><i class=\"fa fa-pencil\" />" +
+                            "               onclick=\"$.updateGroupPoints('" + groupName + "', false, false)\"><i class=\"fa fa-hdd-o\" />" +
                             "        </button>" +
                             "    </form></td>";
 
-                     if (groupPoints === '-1') {
-                         html += "<td style=\"float: right\"><i>Using Global Value</i></td>";
-                     } else {
-                         html += "<td />";
-                     }
-                     html += "</tr>";
+                    if (groupPoints === '-1') {
+                        html += "<td style=\"float: right\"><i>Using Global Value</i></td>";
+                    } else {
+                        html += "<td />";
+                    }
+                    html += "</tr>";
                 }
                 $("#groupPointsOfflineTable").html(html);
                 handleInputFocus();
@@ -213,7 +215,7 @@
         sendDBKeys("points_grouppoints", "grouppoints");
         sendDBQuery("points_pricecommods", "settings", "pricecomMods");
         sendDBKeys("points_grouppointsoffline", "grouppointsoffline");
-    };
+    }
 
     /**
      * @function doLiteQuery
@@ -224,7 +226,7 @@
         sendDBKeys("points_grouppoints", "grouppoints");
         sendDBQuery("points_pricecommods", "settings", "pricecomMods");
         sendDBKeys("points_grouppointsoffline", "grouppointsoffline");
-    };
+    }
 
     /**
      * @function sortPointsTable
@@ -261,6 +263,7 @@
     function copyUserPoints(username, points) {
         $("#adjustUserPointsNameInput").val(username);
         $("#adjustUserPointsInput").val(points);
+        $('#adjustUserPointsNameInput').focus();
     }
 
     /**
@@ -269,6 +272,12 @@
     function setPointName() {
         var singleName = $("#setPointNameInput").val(),
             pluralName = $("#setPointsNameInput").val();
+
+        if (singleName.match(/\s/ig) || pluralName.match(/\s/ig)) {
+            $("#setPointsNameInput").val("Your points name cannot contain a space.");
+            setTimeout(function() { doLiteQuery(); }, TIMEOUT_WAIT_TIME * 2);
+            return;
+        }
 
         if (singleName.length != 0) {
             sendDBUpdate("points_settings", "pointSettings", "pointNameSingle", singleName);
@@ -304,6 +313,12 @@
             return;
         }
 
+        if (value.indexOf('.') !== -1 || (parseInt(value) < 1 && parseInt(value) !== 0)) {
+            $("#setPointGainInput_" + action).val('Only natural numbers are allowed.');
+            setTimeout(function() { $("#setPointGainInput_" + action).val(''); }, TIMEOUT_WAIT_TIME * 3);
+            return;
+        }
+
         if (action == "setgain") {
             sendDBUpdate("points_settings", "pointSettings", "onlineGain", value);
         }
@@ -320,6 +335,23 @@
             sendDBUpdate("points_settings", "pointSettings", "offlinePayoutInterval", value);
         }
 
+        if (action == "setactivebonus") {
+            sendDBUpdate("points_settings", "pointSettings", "activeBonus", value);
+        }
+
+        setTimeout(function() { doLiteQuery(); }, TIMEOUT_WAIT_TIME);
+        setTimeout(function() { sendCommand('reloadpoints') }, TIMEOUT_WAIT_TIME);
+    }
+
+    /*
+     * @function setPointsMessage
+     */
+    function setPointsMessage() {
+        var value = $("#pointsMessageInput").val();
+
+        if (value.length > 0) {
+            sendDBUpdate("points_settings", "pointSettings", "pointsMessage", value);
+        }
         setTimeout(function() { doLiteQuery(); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand('reloadpoints') }, TIMEOUT_WAIT_TIME);
     }
@@ -331,22 +363,24 @@
     function modifyUserPoints(action) {
         var username = $("#adjustUserPointsNameInput").val(),
             points = $("#adjustUserPointsInput").val();
+        
+        username = username.replace(/\s+/g, '');
 
         if (action == "take") {
             if (username.length > 0 && points.length > 0) {
-                sendDBDecr("points", "points", username, points);
+                sendDBDecr("points", "points", username.toLowerCase(), String(points));
             }
         }
 
         if (action == "add") {
             if (username.length > 0 && points.length > 0) {
-                sendDBIncr("points", "points", username, points);
+                sendDBIncr("points", "points", username.toLowerCase(), String(points));
             }
         }
 
         if (action == "set") {
             if (username.length > 0 && points.length != 0) {
-                sendDBUpdate("points", "points", username, points);
+                sendDBUpdate("points", "points", username.toLowerCase(), String(points));
             }
         }
         $("#adjustUserPointsNameInput").val('');
@@ -398,7 +432,7 @@
         }
         $("#penaltyUserTime").val('');
         setTimeout(function () { $("#penaltyUser").val(''); }, TIMEOUT_WAIT_TIME * 10);
-    };
+    }
 
     /**
      * @function topListPoints
@@ -410,20 +444,20 @@
         }
         setTimeout(function() { doLiteQuery(); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { sendCommand('reloadtop'); }, TIMEOUT_WAIT_TIME);
-    };
+    }
 
     /**
      * @function toggleModPriceCom
      */
     function toggleModPriceCom() {
-        $("#priceComMods").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#priceComMods").html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         if (priceComMods == "true") {
             sendDBUpdate("points_modprice", "settings", "pricecomMods", "false");
         } else {
             sendDBUpdate("points_modprice", "settings", "pricecomMods", "true");
         }
         setTimeout(function() { doLiteQuery(); }, TIMEOUT_WAIT_TIME);
-    };
+    }
 
     // Import the HTML file for this panel.
     $("#pointsPanel").load("/panel/points.html");
@@ -462,4 +496,5 @@
     $.topListPoints = topListPoints;
     $.toggleModPriceCom = toggleModPriceCom;
     $.setInterval = setInterval;
+    $.setPointsMessage = setPointsMessage;
 })();

@@ -1,6 +1,6 @@
 <!--
 
- Copyright (C) 2016 phantombot.tv
+ Copyright (C) 2016-2018 phantombot.tv
 
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -88,7 +88,7 @@
                 <label for="postOnlineTweet">Stream Online Tweet</label>
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateDataTwitter('message_online')">Update</button>
                 <input type="text" maxlength="140" class="form-control" id="message_onlineTweetInput" placeholder="Tweet Text"
-                       data-toggle="tooltip" title="Tags: (game) (twitchurl)">
+                       data-toggle="tooltip" title="Tags: (title) (game) (twitchurl)">
             </div>
         </form>
     
@@ -97,7 +97,7 @@
                 <label for="postGameChangeTweet">Game Change Tweet</label>
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateDataTwitter('message_gamechange')">Update</button>
                 <input type="text" maxlength="140" class="form-control" id="message_gamechangeTweetInput" placeholder="Tweet Text"
-                       data-toggle="tooltip" title="Tags: (game) (twitchurl)">
+                       data-toggle="tooltip" title="Tags: (title) (game) (twitchurl)">
             </div>
         </form>
     
@@ -106,7 +106,7 @@
                 <label for="postAutoUpdateTweet">Auto-Tweet Stream Status Tweet</label>
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateDataTwitter('message_update')">Update</button>
                 <input type="text" maxlength="140" class="form-control" id="message_updateTweetInput" placeholder="Tweet Text"
-                       data-toggle="tooltip" title="Tags: (game) (twitchurl) (uptime)">
+                       data-toggle="tooltip" title="Tags: (title) (game) (twitchurl) (uptime)">
             </div>
         </form>
 
@@ -116,6 +116,29 @@
                 <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateDataTwitter('postdelay_update')">Update</button>
                 <input type="number" min="180" class="form-control" id="postdelay_updateTweetInput" placeholder="Minutes"
                        data-toggle="tooltip" title="Post delay in minutes. Minimum is 180.">
+            </div>
+        </form>
+    </div>
+
+    <h3>Retweet Reward Options</h3>
+    <div>
+        <div id="twitterRewardTable" style="height: 80px; overflow: auto;" />
+
+        <form role="form">
+            <div class="form-group" onkeypress="return event.keyCode != 13">
+                <label for="rewardPointsTweet">Reward Points for Retweeting</label>
+                <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateDataTwitter('reward_points')">Update</button>
+                <input type="number" min="0" class="form-control" id="reward_pointsTweetInput" placeholder="Points"
+                       data-toggle="tooltip" title="Points rewarded for retweeting posts.">
+            </div>
+        </form>
+
+        <form role="form">
+            <div class="form-group" onkeypress="return event.keyCode != 13">
+                <label for="rewardCoodownTweet">Hours Between Rewards for User for Retweeting</label>
+                <button type="button" class="btn btn-primary inline pull-right" onclick="$.updateDataTwitter('reward_cooldown')">Update</button>
+                <input type="number" min="0" class="form-control" id="reward_cooldownTweetInput" placeholder="Hours"
+                       data-toggle="tooltip" title="Time in hours that must pass before user can receive a reward between retweets.  Fractions are allowed (0.5 = 30 minutes).">
             </div>
         </form>
     </div>

@@ -1,238 +1,301 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * hostHandler.js
  *
  * Register and announce (un)host events.
- * Optionally supports rewarding points for a follow (Only every 6 hours!)
+ * Optionally supports rewarding points for a host (Only every 6 hours!)
  */
 (function() {
-    var hostReward = $.getSetIniDbNumber('settings', 'hostReward', 200),
+    var hostReward = $.getSetIniDbNumber('settings', 'hostReward', 0),
+        autoHostReward = $.getSetIniDbNumber('settings', 'autoHostReward', 0),
+        hostMinViewerCount = $.getSetIniDbNumber('settings', 'hostMinViewerCount', 0),
+        hostMinCount = $.getSetIniDbNumber('settings', 'hostMinCount', 0),
         hostMessage = $.getSetIniDbString('settings', 'hostMessage', $.lang.get('hosthandler.host.message')),
-        hostHistory = $.getSetIniDbBoolean('settings', 'hostHistory', false),
+        autoHostMessage = $.getSetIniDbString('settings', 'autoHostMessage', $.lang.get('hosthandler.autohost.message')),
+        hostHistory = $.getSetIniDbBoolean('settings', 'hostHistory', true),
+        hostToggle = $.getSetIniDbBoolean('settings', 'hostToggle', false),
+        autoHostToggle = $.getSetIniDbBoolean('settings', 'autoHostToggle', false),
         hostTimeout = 216e5, // 6 hours = 6 * 60 * 60 * 1000
         hostList = {},
         announceHosts = false;
 
-    /**
-     * Reloads the script variables for when the user edits stuff on the panel 
-     *
+    /*
      * @function updateHost
      */
     function updateHost() {
         hostReward = $.getIniDbNumber('settings', 'hostReward');
+        autoHostReward = $.getIniDbNumber('settings', 'autoHostReward');
+        hostMinViewerCont = $.getIniDbNumber('settings', 'hostMinViewerCount');
+        hostMinCount = $.getIniDbNumber('settings', 'hostMinCount');
         hostMessage = $.getIniDbString('settings', 'hostMessage');
+        autoHostMessage = $.getIniDbString('settings', 'autoHostMessage');
         hostHistory = $.getIniDbBoolean('settings', 'hostHistory');
-    };
+        hostToggle = $.getIniDbBoolean('settings', 'hostToggle');
+        autoHostToggle = $.getIniDbBoolean('settings', 'autoHostToggle');
+    }
 
-    /**
-     * Gets the host start event from the core.
-     *
+    /*
      * @event twitchHostsInitialized
      */
     $.bind('twitchHostsInitialized', function(event) {
-        /** is the module enabled? */
         if (!$.bot.isModuleEnabled('./handlers/hostHandler.js')) {
             return;
         }
 
-        $.consoleLn(">> Enabling hosts announcements");
-        $.log.event('Host announcements enabled');
+        $.consoleLn('>> Enabling hosts announcements');
         announceHosts = true;
     });
 
-    /**
-     * Gets the host event from the core.
-     *
-     * @event twitchHosted
+    /*
+     * @event twitchAutoHosted
      */
-    $.bind('twitchHosted', function(event) {
-        /** is the module enabled? */
-        if (!$.bot.isModuleEnabled('./handlers/hostHandler.js')) {
+    $.bind('twitchAutoHosted', function(event) {
+        var hoster = event.getHoster().toLowerCase(),
+            viewers = parseInt(event.getUsers()),
+            s = autoHostMessage;
+
+        if (announceHosts === false) {
             return;
         }
 
-        var hoster = $.username.resolve(event.getHoster()),
-            now = $.systemTime(),
-            msg = hostMessage,
-            jsonObject = {};
-
-        /** Are we allowed to announce hosts? */
-        if (!announceHosts) {
-            return;
-        }
-
-        $.writeToFile(hoster, "./addons/hostHandler/latestHost.txt", false);
-
-        /** Does the bot know this guy hosted? */
-        if (hostList[hoster]) {
-            /** Has this guy been hosting for a while now? */
-            if (hostList[hoster].hostTime > now) {
+        if (hostList[hoster] !== undefined) {
+            if (hostList[hoster].hostTime < $.systemTime()) {
+                hostList[hoster] = {
+                    hostTime: ($.systemTime() + hostTimeout)
+                };
+            } else {
                 return;
             }
-            hostList[hoster].hostTime = now + hostTimeout;
         } else {
-            /** This guy never hosted, add him to a array. */
             hostList[hoster] = {
-                hostTime: now + hostTimeout
+                hostTime: ($.systemTime() + hostTimeout)
             };
         }
 
-        /** Replace the tags in the host message */
-        msg = msg.replace('(name)', hoster);
-        msg = msg.replace('(reward)', hostReward.toString());
-        $.say(msg);
-
-        /** is there a host reward set? */
-        if (hostReward > 0) {
-            /** Give the hoster points */
-            $.inidb.incr('points', hoster.toLowerCase(), hostReward);
+        if (s.match(/\(name\)/)) {
+            s = $.replace(s, '(name)', $.username.resolve(hoster));
         }
 
-        /** is the host history enabled? */
-        if ($.getIniDbBoolean('settings', 'hostHistory', false)) {
-            jsonObject = { 'host' : String(hoster), 'time' : now, 'viewers' : 0 }; // Add viewers as placeholder.
-            $.inidb.set('hosthistory', hoster + '_' + now, JSON.stringify(jsonObject));
+        if (s.match(/\(reward\)/)) {
+            s = $.replace(s, '(reward)', autoHostReward.toString());
+        }
+
+        if (s.match(/\(viewers\)/)) {
+            s = $.replace(s, '(viewers)', viewers.toString());
+        }
+
+        if (s.match(/^\/w/)) {
+            s = s.replace('/w', ' /w');
+        }
+
+        if (autoHostToggle === true && viewers >= hostMinCount) {
+            $.say(s);
+        }
+
+        $.writeToFile(hoster + ' ', './addons/hostHandler/latestAutoHost.txt', false);
+        $.writeToFile(hoster + ' ', './addons/hostHandler/latestHostOrAutoHost.txt', false);
+        if (autoHostReward > 0 && viewers >= hostMinViewerCount) {
+            $.inidb.incr('points', hoster.toLowerCase(), autoHostReward);
         }
     });
 
-    /**
-     * Gets the un-host event from the core.
-     *
-     * @event twitchUnhosted
+    /*
+     * @event twitchHosted
      */
-    $.bind('twitchUnhosted', function(event) {
-        if (!$.bot.isModuleEnabled('./handlers/hostHandler.js')) {
+    $.bind('twitchHosted', function(event) {
+        var hoster = event.getHoster().toLowerCase(),
+            viewers = parseInt(event.getUsers()),
+            s = hostMessage;
+
+        // Always update the Host History even if announcements are off or if they recently
+        // hosted the channel and it would not be noted in chat.  This was the caster does
+        // have a log of all hosts that did occur, announced or not.
+        //
+        if ($.getIniDbBoolean('settings', 'hostHistory', false)) {
+            var now = $.systemTime();
+            var jsonObject = {
+                'host': String(hoster),
+                'time': now,
+                'viewers': viewers
+            };
+            $.inidb.set('hosthistory', hoster + '_' + now, JSON.stringify(jsonObject));
+        }
+
+        if (announceHosts === false) {
             return;
         }
 
-        var hoster = event.getHoster();
-
-        /** Does the bot know this guy hosted? */
         if (hostList[hoster] !== undefined) {
-            /** Has this guy been hosting for a while now? */
             if (hostList[hoster].hostTime < $.systemTime()) {
-                /** Delete this guy from the host array. */
-                delete hostList[hoster];
+                hostList[hoster] = {
+                    hostTime: ($.systemTime() + hostTimeout)
+                };
+            } else {
+                return;
             }
+        } else {
+            hostList[hoster] = {
+                hostTime: ($.systemTime() + hostTimeout)
+            };
+        }
+
+        if (s.match(/\(name\)/)) {
+            s = $.replace(s, '(name)', $.username.resolve(hoster));
+        }
+
+        if (s.match(/\(reward\)/)) {
+            s = $.replace(s, '(reward)', hostReward.toString());
+        }
+
+        if (s.match(/\(viewers\)/)) {
+            s = $.replace(s, '(viewers)', viewers.toString());
+        }
+
+        if (s.match(/^\/w/)) {
+            s = s.replace('/w', ' /w');
+        }
+
+        if (hostToggle === true && viewers >= hostMinCount) {
+            $.say(s);
+        }
+
+        $.writeToFile(hoster + ' ', './addons/hostHandler/latestHost.txt', false);
+        $.writeToFile(hoster + ' ', './addons/hostHandler/latestHostOrAutoHost.txt', false);
+        if (hostReward > 0 && viewers >= hostMinViewerCount) {
+            $.inidb.incr('points', hoster.toLowerCase(), hostReward);
         }
     });
-     
-    /**
-     * Gets the command event from the core
-     *
+
+    /*
      * @event command
      */
     $.bind('command', function(event) {
         var sender = event.getSender(),
             command = event.getCommand(),
-            args = event.getArgs(),
             argsString = event.getArguments(),
-            action = parseInt(args[0]);
+            args = event.getArgs(),
+            action = args[0];
 
-        /**
-         * Set a reward for when someone hosts the channel.
-         *
+        /*
+         * @commandpath hosttoggle - Toggles host announcements.
+         */
+        if (command.equalsIgnoreCase('hosttoggle')) {
+            hostToggle = !hostToggle;
+            $.setIniDbBoolean('settings', 'hostToggle', hostToggle);
+            $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.host.toggle', (hostToggle === true ? $.lang.get('common.enabled') : $.lang.get('common.disabled'))));
+        }
+
+        /*
+         * @commandpath autohosttoggle - Toggles auto host announcements.
+         */
+        if (command.equalsIgnoreCase('autohosttoggle')) {
+            autoHostToggle = !autoHostToggle;
+            $.setIniDbBoolean('settings', 'autoHostToggle', autoHostToggle);
+            $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.auto.host.toggle', (autoHostToggle === true ? $.lang.get('common.enabled') : $.lang.get('common.disabled'))));
+        }
+
+        /*
          * @commandpath hostreward [amount] - Set the amount of points to reward when a channel starts hosting
          */
         if (command.equalsIgnoreCase('hostreward')) {
-            if (!parseInt(action) || isNaN(action)) {
+            if (isNaN(parseInt(action))) {
                 $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostreward.usage', $.pointNameMultiple));
                 return;
             }
 
-            $.inidb.set('settings', 'hostReward', action);
             hostReward = parseInt(action);
+            $.setIniDbNumber('settings', 'hostReward', hostReward);
             $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostreward.success', $.getPointsString(action)));
-            $.log.event(sender + ' changed the host reward to ' + action);
         }
 
-        /**
-         * Set a message for when someone hosts the channel
-         *
+        /*
+         * @commandpath autohostreward [amount] - Set the amount of points to reward when a channel starts autohosting
+         */
+        if (command.equalsIgnoreCase('autohostreward')) {
+            if (isNaN(parseInt(action))) {
+                $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.autohostreward.usage', $.pointNameMultiple));
+                return;
+            }
+
+            autoHostReward = parseInt(action);
+            $.setIniDbNumber('settings', 'autoHostReward', autoHostReward);
+            $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.autohostreward.success', $.getPointsString(action)));
+        }
+
+        /*
+         * @commandpath hostrewardminviewers [amount] - The number of viewers in the hosted channel required to provide a reward.
+         */
+        if (command.equalsIgnoreCase('hostrewardminviewers')) {
+            if (isNaN(parseInt(action))) {
+                $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostrewardminviewers.usage'));
+                return;
+            }
+
+            hostMinViewerCount = parseInt(action);
+            $.setIniDbNumber('settings', 'hostMinViewerCount', hostMinViewerCount);
+            $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostrewardminviewers.success', hostMinViewerCount));
+        }
+
+        /*
+         * @commandpath hostminviewers [amount] - The number of viewers in the hosted channel required to trigger the chat alert.
+         */
+        if (command.equalsIgnoreCase('hostminviewers')) {
+            if (isNaN(parseInt(action))) {
+                $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostminviewers.usage', hostMinCount));
+                return;
+            }
+
+            hostMinCount = parseInt(action);
+            $.setIniDbNumber('settings', 'hostMinCount', hostMinCount);
+            $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostminviewers.success', hostMinCount));
+        }
+
+        /*
          * @commandpath hostmessage [message] - Set a message given when a channel hosts
          */
         if (command.equalsIgnoreCase('hostmessage')) {
-            if (args.length < 1) {
+            if (action === undefined) {
                 $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostmessage.usage'));
                 return;
             }
 
             hostMessage = argsString;
-            $.inidb.set('settings', 'hostMessage', hostMessage);
+            $.setIniDbString('settings', 'hostMessage', hostMessage);
             $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.hostmessage.success'));
-            $.log.event(sender + ' changed the host message to ' + hostMessage);
         }
 
-        /**
-         * unhost the channel.
-         *
-         * @commandpath unhost - Send the /unhost command to Twitch
+        /*
+         * @commandpath autohostmessage [message] - Set a message given when a channel autohosts
          */
-        if (command.equalsIgnoreCase('unhost')) {
-            $.say('.unhost');
-        }
-
-        /**
-         * Host a channel
-         *
-         * @commandpath host [channel] - Send the /host command to Twitch
-         */
-        if (command.equalsIgnoreCase('host')) {
-			if (args.length < 1) {
-				$.say($.whisperPrefix(sender) + $.lang.get('hosthandler.host.usage'));
-                return;
-			}
-			var target = args[0].toLowerCase();
-
-            $.say('.host ' + target);
-            $.log.event(sender + ' hosted channel ' + target);
-        }
-
-        /**
-         * Check how many people are currently hosting the channel.
-         *
-         * @commandpath hostcount - Announce the number of other channels hosting this channel
-         */
-        if (command.equalsIgnoreCase('hostcount')) {
-            var temp = [],
-                i;
-
-            for (i in hostList) {
-                temp.push(i);
-            }
-
-            if (temp.length == 0) {
-                $.say($.lang.get('hosthandler.hostcount.404'));
+        if (command.equalsIgnoreCase('autohostmessage')) {
+            if (action === undefined) {
+                $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.autohostmessage.usage'));
                 return;
             }
 
-            $.say($.lang.get('hosthandler.hostcount', temp.length));
+            autoHostMessage = argsString;
+            $.setIniDbString('settings', 'autoHostMessage', autoHostMessage);
+            $.say($.whisperPrefix(sender) + $.lang.get('hosthandler.set.autohostmessage.success'));
         }
 
-        /**
-         * Give a list of the current hosters.
-         *
-         * @commandpath hostlist - Announce a list of other channels hosting this channel
-         */
-        if (command.equalsIgnoreCase('hostlist')) {
-            var temp = [],
-                i;
-
-            for (i in hostList) {
-                temp.push(i);
-            }
-
-            if (temp.length == 0) {
-                $.say($.lang.get('hosthandler.hostlist.404'));
-                return;
-            }
-
-            $.say($.lang.get('hosthandler.hostlist', temp.join(', ')));
-        }
-
-        /**
-         * Toggle the host history.
-         *
-         * @commandpath hosthistory [on/off] - Enable/disable collection of host history data for the Panel.
+        /*
+         * @commandpath hosthistory [on/off] - Enable or disable collection of host history data for the Panel.
          */
         if (command.equalsIgnoreCase('hosthistory')) {
             if (args.length < 1) {
@@ -247,26 +310,43 @@
                 $.say($.whisperPrefix(sender) + $.lang.get('hosthistory.change', $.getIniDbBoolean('settings', 'hostHistory') ? "on" : "off"));
             } else {
                 $.say($.whisperPrefix(sender) + $.lang.get('hosthistory.usage', $.getIniDbBoolean('settings', 'hostHistory') ? "on" : "off"));
-                return;
+            }
+        }
+
+        /*
+         * @commandpath host [channel name] - Will host that channel. Make sure to add your bot as a channel editor on your Twitch dashboard for this to work.
+         */
+        if (command.equalsIgnoreCase('host')) {
+            if (action !== undefined) {
+                $.say('.host ' + action);
+            }
+        }
+
+        /*
+         * @commandpath unhost - Will unhost the channel that is being hosted. Make sure to add your bot as a channel editor on your Twitch dashboard for this to work.
+         */
+        if (command.equalsIgnoreCase('unhost')) {
+            if (action !== undefined) {
+                $.say('.unhost');
             }
         }
     });
 
-    /**
-     * Loads commands once the bot is fully loaded
-     *
+    /*
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./handlers/hostHandler.js')) {
-            $.registerChatCommand('./handlers/hostHandler.js', 'hostmessage', 1);
-            $.registerChatCommand('./handlers/hostHandler.js', 'hostreward', 1);
-            $.registerChatCommand('./handlers/hostHandler.js', 'unhost', 1);
-            $.registerChatCommand('./handlers/hostHandler.js', 'host', 1);
-            $.registerChatCommand('./handlers/hostHandler.js', 'hostcount');
-            $.registerChatCommand('./handlers/hostHandler.js', 'hostlist');
-            $.registerChatCommand('./handlers/hostHandler.js', 'hosthistory', 1);
-        }
+        $.registerChatCommand('./handlers/hostHandler.js', 'hostmessage', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'autohostmessage', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'hostreward', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'autohostreward', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'hostrewardminviewers', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'hosthistory', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'hosttoggle', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'autohosttoggle', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'host', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'unhost', 1);
+        $.registerChatCommand('./handlers/hostHandler.js', 'hostminviewers', 1);
     });
 
     $.updateHost = updateHost;

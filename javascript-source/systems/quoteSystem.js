@@ -1,12 +1,29 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * quoteSystem.js
  *
  * Have the bot remember the most epic/derpy oneliners
  */
 (function() {
-	
-	var quoteMode = $.getSetIniDbBoolean('settings', 'quoteMode', true);
 
+    var quoteMode = $.getSetIniDbBoolean('settings', 'quoteMode', true),
+        isDeleting = false;
 
     /**
      * @function updateQuote
@@ -15,6 +32,10 @@
      */
     function updateQuote(quoteid, quote) {
         // Specify String() for objects as they were being treated as an object rather than a String on stringify().
+        quote[0] = String(quote[0]).replace(/"/g, '\'\'');
+        quote[1] = String(quote[1]).replace(/"/g, '\'\'');
+        quote[3] = String(quote[3]).replace(/"/g, '\'\'');
+
         $.inidb.set('quotes', quoteid, JSON.stringify([String(quote[0]), String(quote[1]), String(quote[2]), String(quote[3])]));
     }
 
@@ -28,6 +49,10 @@
         var newKey = $.inidb.GetKeyList('quotes', '').length,
             game = ($.getGame($.channelName) != '' ? $.getGame($.channelName) : "Some Game");
 
+        if ($.inidb.exists('quotes', newKey)) {
+            newKey++;
+        }
+        quote = String(quote).replace(/"/g, '\'\'');
         $.inidb.set('quotes', newKey, JSON.stringify([username, quote, $.systemTime(), game + '']));
         return newKey;
     };
@@ -42,10 +67,16 @@
             quotes = [],
             i;
 
+        if (isDeleting) {
+            return -1;
+        }
+
         if ($.inidb.exists('quotes', quoteId)) {
+            isDeleting = true;
             $.inidb.del('quotes', quoteId);
             quoteKeys = $.inidb.GetKeyList('quotes', '');
 
+            $.inidb.setAutoCommit(false);
             for (i in quoteKeys) {
                 quotes.push($.inidb.get('quotes', quoteKeys[i]));
                 $.inidb.del('quotes', quoteKeys[i]);
@@ -54,7 +85,8 @@
             for (i in quotes) {
                 $.inidb.set('quotes', i, quotes[i]);
             }
-
+            $.inidb.setAutoCommit(true);
+            isDeleting = false;
             return (quotes.length ? quotes.length : 0);
         } else {
             return -1;
@@ -70,7 +102,7 @@
         var quote;
 
         if (!quoteId || isNaN(quoteId)) {
-            quoteId = $.rand($.inidb.GetKeyList('quotes', '').length - 1);
+            quoteId = $.rand($.inidb.GetKeyList('quotes', '').length);
         }
 
         if ($.inidb.exists('quotes', quoteId)) {
@@ -93,7 +125,7 @@
             quoteStr;
 
         /**
-         * @commandpath editquote [id] [user|game|quote] [text]
+         * @commandpath editquote [id] [user|game|quote] [text] - Edit quotes.
          */
         if (command.equalsIgnoreCase("editquote")) {
             if (args.length < 3) {
@@ -124,53 +156,53 @@
 
             $.log.event(sender + ' edited quote #' + quote);
         }
-		
-		/**
-		 * @commandpath quotemodetoggle - toggle between !addquote function modes
-		 */
-		if (command.equalsIgnoreCase('quotemodetoggle')) {
-			if (quoteMode) {
-				quoteMode = false;
-				$.inidb.set('settings', 'quoteMode', 'false');
-				$.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage2'));
-				return;
-			} else {
-				quoteMode = true;
-				$.inidb.set('settings', 'quoteMode', 'true');
-				$.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage1'));
-				return;
-			}
-		}
+
+        /**
+         * @commandpath quotemodetoggle - toggle between !addquote function modes
+         */
+        if (command.equalsIgnoreCase('quotemodetoggle')) {
+            if (quoteMode) {
+                quoteMode = false;
+                $.inidb.set('settings', 'quoteMode', 'false');
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage2'));
+                return;
+            } else {
+                quoteMode = true;
+                $.inidb.set('settings', 'quoteMode', 'true');
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage1'));
+                return;
+            }
+        }
 
         /**
          * @commandpath addquote [quote text] - Save a quote
          */
         if (command.equalsIgnoreCase('addquote')) {
-			if (quoteMode) {
-			    if (args.length < 1) {
-					$.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage1'));
-					return;
-				}
-				quote = args.splice(0).join(' ');
-				$.say($.lang.get('quotesystem.add.success', $.username.resolve(sender), saveQuote(String($.username.resolve(sender)), quote)));
-				$.log.event(sender + ' added a quote "' + quote + '".');
-				return;
-			} else {
-				if (args.length < 2) {
-					$.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage2'));
-					return;
-				}
-				var target = args[0].toLowerCase();
-				if (!$.user.isKnown(target)) {
-					$.say($.whisperPrefix(sender) + $.lang.get('common.user.404', target));
-					return;
-				}
-				quote = args.splice(1).join(' ');
-				$.say($.lang.get('quotesystem.add.success', $.username.resolve(sender), saveQuote(String($.username.resolve(target)), quote)));
-				$.log.event(sender + ' added a quote "' + quote + '".');
-				return;
-			}
-		}
+            if (quoteMode) {
+                if (args.length < 1) {
+                    $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage1'));
+                    return;
+                }
+                quote = args.splice(0).join(' ');
+                $.say($.lang.get('quotesystem.add.success', $.username.resolve(sender), saveQuote(String($.username.resolve(sender)), quote)));
+                $.log.event(sender + ' added a quote "' + quote + '".');
+                return;
+            } else {
+                if (args.length < 2) {
+                    $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.add.usage2'));
+                    return;
+                }
+                var target = args[0].toLowerCase();
+                if (!$.user.isKnown(target)) {
+                    $.say($.whisperPrefix(sender) + $.lang.get('common.user.404', target));
+                    return;
+                }
+                quote = args.splice(1).join(' ');
+                $.say($.lang.get('quotesystem.add.success', $.username.resolve(target), saveQuote(String($.username.resolve(target)), quote)));
+                $.log.event(sender + ' added a quote "' + quote + '".');
+                return;
+            }
+        }
 
         /**
          * USED BY THE PANEL
@@ -217,9 +249,7 @@
 
             var newCount;
 
-            if ((newCount = deleteQuote(args[0])) >= 0) {
-            } else {
-            }
+            if ((newCount = deleteQuote(args[0])) >= 0) {} else {}
         }
 
         /**
@@ -254,21 +284,43 @@
             $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.quotemessage.success'));
             $.log.event(sender + ' changed the quote message to: ' + quoteStr);
         }
+
+        /**
+         * @commandpath searchquote [string] - Searches the quotes for a string and returns a list of IDs
+         */
+        if (command.equalsIgnoreCase('searchquote')) {
+            if (!args[0]) {
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.usage'));
+                return;
+            }
+            var searchString = args.join(' ');
+            if (searchString.length < 5) {
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.usage'));
+                return;
+            }
+
+            var matchingKeys = $.inidb.searchByValue('quotes', searchString);
+            if (matchingKeys.length == 0) {
+                $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.404'));
+                return;
+            }
+
+            $.say($.whisperPrefix(sender) + $.lang.get('quotesystem.searchquote.found', matchingKeys.join(', ')));
+        }
     });
 
     /**
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./systems/quoteSystem.js')) {
-			$.registerChatCommand('./systems/quoteSystem.js', 'quotemodetoggle', 2);
-            $.registerChatCommand('./systems/quoteSystem.js', 'addquote', 2);
-            $.registerChatCommand('./systems/quoteSystem.js', 'addquotesilent', 1);
-            $.registerChatCommand('./systems/quoteSystem.js', 'delquote', 2);
-            $.registerChatCommand('./systems/quoteSystem.js', 'delquotesilent', 1);
-            $.registerChatCommand('./systems/quoteSystem.js', 'editquote', 2);
-            $.registerChatCommand('./systems/quoteSystem.js', 'quote');
-            $.registerChatCommand('./systems/quoteSystem.js', 'quotemessage', 1);
-        }
+        $.registerChatCommand('./systems/quoteSystem.js', 'quotemodetoggle', 2);
+        $.registerChatCommand('./systems/quoteSystem.js', 'searchquote', 7);
+        $.registerChatCommand('./systems/quoteSystem.js', 'addquote', 2);
+        $.registerChatCommand('./systems/quoteSystem.js', 'addquotesilent', 1);
+        $.registerChatCommand('./systems/quoteSystem.js', 'delquote', 2);
+        $.registerChatCommand('./systems/quoteSystem.js', 'delquotesilent', 1);
+        $.registerChatCommand('./systems/quoteSystem.js', 'editquote', 2);
+        $.registerChatCommand('./systems/quoteSystem.js', 'quote');
+        $.registerChatCommand('./systems/quoteSystem.js', 'quotemessage', 1);
     });
 })();

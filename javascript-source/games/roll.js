@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * roll.js
  *
@@ -97,10 +114,10 @@
                         break;
                 }
 
-                $.say(resultMessage + $.gameMessages.getWin(sender));
+                $.say(resultMessage + $.gameMessages.getWin(sender, 'roll'));
                 $.inidb.incr('points', sender, prizes[dice1 - 1]);
             } else {
-                $.say(resultMessage + $.gameMessages.getLose(sender));
+                $.say(resultMessage + $.gameMessages.getLose(sender, 'roll'));
             }
         }
     });
@@ -109,18 +126,10 @@
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./games/roll.js')) {
-            $.registerChatCommand('./games/roll.js', 'roll');
-            $.registerChatSubcommand('roll', 'rewards', 1);
-        }
+        $.registerChatCommand('./games/roll.js', 'roll');
+        $.registerChatSubcommand('roll', 'rewards', 1);
     });
 
-    /**
-     * Warn the user if the points system is disabled and this is enabled.
-     */
-    if ($.bot.isModuleEnabled('./games/roll.js') && !$.bot.isModuleEnabled('./systems/pointSystem.js')) {
-        $.log.error("Disabled. ./systems/pointSystem.js is not enabled.");
-    }
 
     $.loadPrizes = loadPrizes;
 })();

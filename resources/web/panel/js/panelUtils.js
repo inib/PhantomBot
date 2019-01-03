@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
@@ -24,14 +24,14 @@
  * Purpose  : Contains utilities for the control panel.
  */
 var DEBUG_MODE = false;
-var PANEL_VERSION = "@webpanel.version@";
+var PANEL_VERSION = "1.1";
 var TABS_INITIALIZED = false;
 var INITIAL_WAIT_TIME = 200;
 var TIMEOUT_WAIT_TIME = 500;
 var YOUTUBE_IFRAME = false;
 
 var url = window.location.host.split(":");
-var addr = 'ws://' + url[0] + ':' + getPanelPort();
+var addr = (getProtocol() == 'https://' ? 'wss://' : 'ws://') + url[0] + ':' + getPanelPort();
 //var connection = new WebSocket(addr, []);
 var connection = new ReconnectingWebSocket(addr, null, {reconnectInterval: 5000});
 var isConnected = false;
@@ -91,11 +91,10 @@ connection.onmessage = function(e) {
     }
     debugMsg('connection.onmessage('+ e.data + ')');
 
-    if (messageObject['authresult'] == false) {
-        if (!messageObject['authresult']) {
+    if (messageObject['authresult'] !== undefined) {
+        if (messageObject['authresult'] === 'false') {
             isConnected = false;
             newPanelAlert('Authorization Failed! Check Configuration File', 'danger', 0);
-            return;
         }
         return;
     }
@@ -121,7 +120,9 @@ connection.onmessage = function(e) {
     if (e.data.indexOf('poll_') !== -1) $.pollOnMessage(e);
     if (e.data.indexOf('gambling_') !== -1) $.gamblingOnMessage(e);
     if (e.data.indexOf('games_') !== -1) $.gamesOnMessage(e);
+    if (e.data.indexOf('queue_') !== -1) $.queueOnMessage(e);
     if (e.data.indexOf('twitter_') !== -1) $.twitterOnMessage(e);
+    if (e.data.indexOf('discord_') !== -1) $.discordOnMessage(e);
 
     if (e.data.indexOf('audio_') !== -1) $.audioOnMessage(e);
     if (e.data.indexOf('help_') !== -1) $.helpOnMessage(e);
@@ -137,7 +138,7 @@ function newPanelAlert(message, type, timeout) {
     debugMsg("newPanelAlert(" + message + ", " + type + ", " + timeout + ")");
     $(".alert").fadeIn(1000);
     $("#newPanelAlert").show().html('<div class="alert alert-' + type + '"><button type="button" '+
-                        'class="close" data-dismiss="alert" aria-hidden="true"></button><span>' + 
+                        'class="close" data-dismiss="alert" aria-hidden="true"></button><span>' +
                          message + '</span></div>');
     if (timeout != 0) {
         $(".alert-" + type).delay(timeout).fadeOut(1000, function () { $(this).remove(); });
@@ -263,12 +264,27 @@ function sendDBDelete(unique_id, table, key) {
 }
 
 /**
+ * @function sendWSEvent
+ * @param {String} event_id
+ * @param {String} script
+ * @param {String} argsString
+ * @param {Array} args
+ */
+function sendWSEvent(event_id, script, argsString, args) {
+    jsonObject = {};
+    jsonObject['socket_event'] = event_id;
+    jsonObject['script'] = script;
+    jsonObject['args'] = { 'arguments': (argsString ? argsString : ''), 'args': (args ? args : []) };
+    connection.send(JSON.stringify(jsonObject));
+}
+
+/**
  * @function panelStrcmp
  * @param {String} a
  * @param {String} b
  * @return {Number} match == 0; no match != 0
  *
- * Note that the below will not work on interational strings, only 
+ * Note that the below will not work on interational strings, only
  * ASCII compares.  If international strings are in play, then
  * localeCompare should be used instead.
  */
@@ -344,7 +360,7 @@ function handleInputFocus() {
  */
 function setInputFocus(value) {
    inputFieldInFocus = value;
-} 
+}
 
 /**
  * @function isInputFocus
@@ -428,11 +444,20 @@ function performCurrentPanelRefresh() {
              break;
          case 16 :
              newPanelAlert('Refreshing Data', 'success', 1000);
+             $.queueDoQuery();
+             break;
+         case 17 :
+             newPanelAlert('Refreshing Data', 'success', 1000);
              $.twitterDoQuery();
              break;
-         case 17 : 
+         case 18 :
+             newPanelAlert('Refreshing Data', 'success', 1000);
+             $.discordDoQuery();
+             break;
+         case 19 :
              newPanelAlert('Refreshing Data', 'success', 1000);
              $.audioDoQuery();
              break;
+
     }
 }

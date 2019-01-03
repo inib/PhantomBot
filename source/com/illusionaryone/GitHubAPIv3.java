@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,27 +17,19 @@
  */
 package com.illusionaryone;
 
-import com.gmt2001.UncaughtExceptionHandler;
-import me.mast3rplan.phantombot.RepoVersion;
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import javax.net.ssl.HttpsURLConnection;
-import org.apache.commons.io.IOUtils;
+
+import tv.phantombot.RepoVersion;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -174,7 +166,7 @@ public class GitHubAPIv3 {
             return null;
         }
         String tagName = jsonArray.getJSONObject(0).getString("tag_name");
-        if (tagName.equals("v" + RepoVersion.getPhantomBotVersion())) {
+        if (tagName.equals("v" + RepoVersion.getPhantomBotVersion().split("-")[0])) {
             return null;
         }
 

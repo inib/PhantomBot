@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 */
 
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,35 +18,23 @@
  */
 package com.illusionaryone;
 
-import com.gmt2001.UncaughtExceptionHandler;
-
-import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
-import java.io.Writer;
-
 import java.net.MalformedURLException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
-import java.net.URLConnection;
-import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import javax.net.ssl.HttpsURLConnection;
 
-import org.apache.commons.io.IOUtils;
-import org.json.JSONArray;
+import tv.phantombot.PhantomBot;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.JSONStringer;
-
-import me.mast3rplan.phantombot.PhantomBot;
 
 /*
  * Communicates with the GameWisp v1 API server.
@@ -221,7 +209,7 @@ public class GameWispAPIv1 {
      */
     public String getUserSubInfoString(String username) {
         JSONObject jsonObject = getUserSubInfoJSON(username);
-        return jsonObject.toString(); 
+        return jsonObject.toString();
     }
 
     /*
@@ -230,11 +218,11 @@ public class GameWispAPIv1 {
      */
     public String[] refreshToken() {
         JSONObject jsonObject = readJsonFromPOSTUrl(sAPIURL + "/pub/v1/oauth/token" +
-                                                             "?grant_type=refresh_token" +
-                                                             "&client_id=" + devKey +
-                                                             "&client_secret=" + devSec +
-                                                             "&redirect_uri=" + devURI +
-                                                             "&refresh_token=" + sRefreshToken);
+                                "?grant_type=refresh_token" +
+                                "&client_id=" + devKey +
+                                "&client_secret=" + devSec +
+                                "&redirect_uri=" + devURI +
+                                "&refresh_token=" + sRefreshToken);
         if (jsonObject.has("access_token") && jsonObject.has("refresh_token")) {
             String newAccessToken = jsonObject.getString("access_token");
             String newRefreshToken = jsonObject.getString("refresh_token");

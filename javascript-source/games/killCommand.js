@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * killCommand.js
  *
@@ -10,6 +27,13 @@
         jailTimeout = $.getSetIniDbNumber('settings', 'killTimeoutTime', 60),
         lang,
         rand;
+
+    /**
+     * @function reloadKill
+     */
+    function reloadKill() {
+    	jailTimeout = $.getIniDbNumber('settings', 'killTimeoutTime', 60);
+    }
 
     /**
      * @function loadResponses
@@ -34,16 +58,18 @@
     };
 
     function kill(sender, user) {
+        var tries = 0;
         do {
+            tries++;
             rand = $.randRange(1, otherMessageCount);
-        } while (rand == lastRandom);
+        } while (rand == lastRandom && tries < 5);
         lang = $.lang.get('killcommand.other.' + rand, $.resolveRank(sender), $.resolveRank(user), jailTimeout, $.botName);
         if (lang.startsWith('(jail)')) {
             lang = $.replace(lang, '(jail)', '');
             $.say(lang);
             if (!$.isMod(sender) && jailTimeout > 0) {
-                setTimeout(function () {
-                    $.say('.timeout ' + sender + ' ' + jailTimeout);
+                setTimeout(function() {
+                    $.session.say('.timeout ' + sender + ' ' + jailTimeout);
                 }, 1500);
             }
         } else {
@@ -90,12 +116,13 @@
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./games/killCommand.js')) {
-            if (selfMessageCount == 0 && otherMessageCount == 0) {
-               loadResponses();
-            }
-            $.registerChatCommand('./games/killCommand.js', 'kill', 7);
-            $.registerChatCommand('./games/killCommand.js', 'jailtimeouttime', 1);
+        if (selfMessageCount == 0 && otherMessageCount == 0) {
+            loadResponses();
         }
+
+        $.registerChatCommand('./games/killCommand.js', 'kill', 7);
+        $.registerChatCommand('./games/killCommand.js', 'jailtimeouttime', 1);
     });
+
+    $.reloadKill = reloadKill;
 })();

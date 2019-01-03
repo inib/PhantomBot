@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 */
 
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,39 +18,30 @@
  */
 package com.illusionaryone;
 
-import com.gmt2001.UncaughtExceptionHandler;
+import java.io.File;
+import java.util.List;
 
+import twitter4j.Paging;
 import twitter4j.Status;
+import twitter4j.StatusUpdate;
 import twitter4j.Twitter;
 import twitter4j.TwitterException;
 import twitter4j.TwitterFactory;
-import twitter4j.StatusUpdate;
 import twitter4j.auth.AccessToken;
-import twitter4j.auth.RequestToken;
-import twitter4j.conf.Configuration;
-import twitter4j.conf.ConfigurationFactory;
 import twitter4j.conf.ConfigurationBuilder;
-import twitter4j.Paging;
-
-import java.io.File;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-
-import java.util.List;
 
 /*
  * API services provided by:
  * Twitter4J (http://twitter4j.org/)
- * 
+ *
  * Copyright 2007 Yusuke Yamamoto
- * 
+ *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- * 
+ *
  *     http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * Distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -141,7 +132,7 @@ public class TwitterAPI {
      * @return  Boolean  Returns true if authentication was successful else false.
      */
     public Boolean authenticate() {
-        com.gmt2001.Console.debug.println("TwitterAPI::authenticate()");
+        com.gmt2001.Console.debug.println("Attempting to Authenticate");
         try {
             ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             configurationBuilder.setOAuthConsumerKey(consumerKey);
@@ -155,13 +146,12 @@ public class TwitterAPI {
             accessToken = twitter.getOAuthAccessToken();
             com.gmt2001.Console.out.println("Authenticated with Twitter API");
             return true;
-        }
-        catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::authenticate: Failed: " + ex.getMessage());
+        } catch (TwitterException ex) {
+            com.gmt2001.Console.err.println("Twitter Auth Failed: " + ex.getMessage());
             accessToken = null;
             return false;
         }
-    }     
+    }
 
     /*
      * Posts a Tweet on Twitter.  This will post to the user timeline and is the same as posting any
@@ -176,11 +166,11 @@ public class TwitterAPI {
         }
 
         try {
-            Status status = twitter.updateStatus(statusString.replaceAll("@", ""));
-            com.gmt2001.Console.debug.println("TwitterAPI::updateStatus: Success");
+            Status status = twitter.updateStatus(statusString.replaceAll("@", "").replaceAll("#", ""));
+            com.gmt2001.Console.debug.println("Success");
             return "true";
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::updateStatus: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return "false";
         }
     }
@@ -198,13 +188,13 @@ public class TwitterAPI {
         }
 
         try {
-            StatusUpdate statusUpdate = new StatusUpdate(statusString.replaceAll("@", ""));
+            StatusUpdate statusUpdate = new StatusUpdate(statusString.replaceAll("@", "").replaceAll("#", ""));
             statusUpdate.setMedia(new File(filename));
             Status status = twitter.updateStatus(statusUpdate);
-            com.gmt2001.Console.debug.println("TwitterAPI::updateStatus: Success");
+            com.gmt2001.Console.debug.println("Success");
             return "true";
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::updateStatus: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return "false";
         }
     }
@@ -216,28 +206,28 @@ public class TwitterAPI {
      */
     public List<Status> getUserTimeline(long sinceId) {
         if (accessToken == null) {
-            com.gmt2001.Console.debug.println("TwitterAPI::getUserTimeline: Access Token is NULL");
+            com.gmt2001.Console.debug.println("Access Token is NULL");
             return null;
         }
 
         try {
-            com.gmt2001.Console.debug.println("TwitterAPI::getUserTimeline: Polling Data");
+            com.gmt2001.Console.debug.println("Polling Data");
             if (sinceId != 0L) {
                 Paging paging = new Paging(sinceId);
                 List<Status> statuses = twitter.getUserTimeline(paging);
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             } else {
                 List<Status> statuses = twitter.getUserTimeline();
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             }
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::getUserTimeline: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return null;
         }
     }
@@ -250,54 +240,54 @@ public class TwitterAPI {
      */
     public String getUserTimeline(String username) {
         if (accessToken == null) {
-            com.gmt2001.Console.debug.println("TwitterAPI::getUserTimeline: Access Token is NULL");
+            com.gmt2001.Console.debug.println("Access Token is NULL");
             return null;
         }
 
         try {
-            com.gmt2001.Console.debug.println("TwitterAPI::getUserTimeline: Polling Data");
+            com.gmt2001.Console.debug.println("Polling Data");
             List<Status> statuses = twitter.getUserTimeline(username);
-            if (statuses.size() == 0) {
+            if (statuses.isEmpty()) {
                 return null;
             }
             return statuses.get(0).getText();
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::getUserTimeline: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return null;
         }
-   } 
+    }
 
     /*
      * Reads the home timeline on Twitter.  This includes posts made by the user, retweets, and
-     * posts made by friends.  This is essentially the screen that is seen when logging into 
+     * posts made by friends.  This is essentially the screen that is seen when logging into
      * Twitter.
      *
      * @return  List<Status>  List of Status objects on success, null on failure.
      */
     public List<Status> getHomeTimeline(long sinceId) {
         if (accessToken == null) {
-            com.gmt2001.Console.debug.println("TwitterAPI::getHomeTimeline: Access Token is NULL");
+            com.gmt2001.Console.debug.println("Access Token is NULL");
             return null;
         }
 
         try {
-            com.gmt2001.Console.debug.println("TwitterAPI::getHomeTimeline: Polling Data");
+            com.gmt2001.Console.debug.println("Polling Data");
             if (sinceId != 0L) {
                 Paging paging = new Paging(sinceId);
                 List<Status> statuses = twitter.getHomeTimeline(paging);
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             } else {
                 List<Status> statuses = twitter.getHomeTimeline();
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             }
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::getHomeTimeline: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return null;
         }
     }
@@ -310,62 +300,87 @@ public class TwitterAPI {
      */
     public List<Status> getRetweetsOfMe(long sinceId) {
         if (accessToken == null) {
-            com.gmt2001.Console.debug.println("TwitterAPI::getRetweetsOfMe: Access Token is NULL");
+            com.gmt2001.Console.debug.println("Access Token is NULL");
             return null;
         }
 
         try {
-            com.gmt2001.Console.debug.println("TwitterAPI::getRetweetsOfMe: Polling Data");
+            com.gmt2001.Console.debug.println("Polling Data");
             if (sinceId != 0L) {
                 Paging paging = new Paging(sinceId);
                 List<Status> statuses = twitter.getRetweetsOfMe(paging);
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             } else {
                 List<Status> statuses = twitter.getRetweetsOfMe();
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             }
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::getRetweetsOfMe: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return null;
         }
     }
 
     /*
-     * Looks for mentions (@username) on Twitter.  
+     * Grabs retweet information from a specific Tweet from Twitter.
+     *
+     * @param  long          The ID of a Tweet to retrieve data for.
+     * @return List<status>  List of Status objects on success, null on failure.
+     */
+    public List<Status> getRetweets(long statusId) {
+        if (accessToken == null) {
+            com.gmt2001.Console.debug.println("Access Token is NULL");
+            return null;
+        }
+
+        try {
+            com.gmt2001.Console.debug.println("Polling Data");
+            List<Status> statuses = twitter.getRetweets(statusId);
+            if (statuses.isEmpty()) {
+                return null;
+            }
+            return statuses;
+        } catch (TwitterException ex) {
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
+            return null;
+        }
+    }
+
+    /*
+     * Looks for mentions (@username) on Twitter.
      *
      * @param  long           The last ID was was pulled from Twitter for mentions.
      * @return  List<Status>  List of Status objects on success, null on failure.
      */
     public List<Status> getMentions(long sinceId) {
         if (accessToken == null) {
-            com.gmt2001.Console.debug.println("TwitterAPI::getMentions: Access Token is NULL");
+            com.gmt2001.Console.debug.println("Access Token is NULL");
             return null;
         }
 
         try {
-            com.gmt2001.Console.debug.println("TwitterAPI::getMentions: Polling Data");
+            com.gmt2001.Console.debug.println("Polling Data");
             if (sinceId != 0L) {
                 Paging paging = new Paging(sinceId);
                 List<Status> statuses = twitter.getMentionsTimeline(paging);
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             } else {
                 List<Status> statuses = twitter.getMentionsTimeline();
-                if (statuses.size() == 0) {
+                if (statuses.isEmpty()) {
                     return null;
                 }
                 return statuses;
             }
         } catch (TwitterException ex) {
-            com.gmt2001.Console.err.println("TwitterAPI::getMentions: Failed: " + ex.getMessage());
+            com.gmt2001.Console.err.println("Failed: " + ex.getMessage());
             return null;
         }
     }

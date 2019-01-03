@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * noticeSystem.js
  *
@@ -10,39 +27,55 @@
         noticeToggle = $.getSetIniDbBoolean('noticeSettings', 'noticetoggle', false),
         numberOfNotices = (parseInt($.inidb.GetKeyList('notices', '').length) ? parseInt($.inidb.GetKeyList('notices', '').length) : 0),
         noticeOffline = $.getSetIniDbBoolean('noticeSettings', 'noticeOfflineToggle', false),
+        isReloading = false,
         messageCount = 0,
         RandomNotice = 0,
+        lastNoticeSent = 0,
         interval;
 
     /**
-     /* @function reloadNotices
-       */
+     * @function reloadNotices
+     */
     function reloadNotices() {
-        var keys = $.inidb.GetKeyList('notices', ''),
-            count = 0,
-            i;
+        if (!isReloading) {
+            isReloading = true;
+            var keys = $.inidb.GetKeyList('notices', ''),
+                count = 0,
+                temp = [],
+                i;
 
-        for (i = 0; i < keys.length; i++) {
-            $.inidb.set('tempnotices', keys[i], $.inidb.get('notices', keys[i]));
+            for (i = 0; i < keys.length; i++) {
+                if ($.inidb.get('notices', keys[i]) != null) {
+                    temp[i] = $.inidb.get('notices', keys[i])
+                }
+            }
+
+            $.inidb.RemoveFile('notices');
+
+            for (i = 0; i < temp.length; i++) {
+                $.inidb.set('notices', 'message_' + count, temp[i]);
+                count++;
+            }
+
+            numberOfNotices = $.inidb.GetKeyList('notices', '').length;
+            if (RandomNotice >= numberOfNotices) {
+                RandomNotice = 0;
+            }
+            isReloading = false;
         }
-
-        $.inidb.RemoveFile('notices');
-        keys = $.inidb.GetKeyList('tempnotices', '');
-
-        for (i = 0; i < keys.length; i++) {
-            $.inidb.set('notices', 'message_' + count, $.inidb.get('tempnotices', keys[i]));
-            count++;
-        }
-
-        $.inidb.RemoveFile('tempnotices');
     };
+
     /**
      * @function sendNotice
      */
     function sendNotice() {
-        var EventBus = Packages.me.mast3rplan.phantombot.event.EventBus,
-            CommandEvent = Packages.me.mast3rplan.phantombot.event.command.CommandEvent,
+        var EventBus = Packages.tv.phantombot.event.EventBus,
+            CommandEvent = Packages.tv.phantombot.event.command.CommandEvent,
             notice = $.inidb.get('notices', 'message_' + RandomNotice);
+
+        if (notice == null) {
+            return;
+        }
 
         RandomNotice++;
 
@@ -51,8 +84,11 @@
         }
 
         if (notice.startsWith('command:')) {
-            notice = notice.substring(8);
-            EventBus.instance().post(new CommandEvent($.botName, notice, ' '));//Don't use postCommand. it got removed.
+            notice = notice.substring(8).replace('!', '');
+            EventBus.instance().post(new CommandEvent($.botName, notice, ' '));
+        } else if (notice.startsWith('!')) {
+            notice = notice.substring(1);
+            EventBus.instance().post(new CommandEvent($.botName, notice, ' '));
         } else {
             $.say(notice);
         }
@@ -65,28 +101,13 @@
         noticeReqMessages = $.getIniDbNumber('noticeSettings', 'reqmessages');
         noticeToggle = $.getIniDbBoolean('noticeSettings', 'noticetoggle');
         noticeOffline = $.getIniDbBoolean('noticeSettings', 'noticeOfflineToggle');
-
-        // Only update noticeInterval if it changed and then reset the timer.
-        if (noticeInterval != $.getIniDbNumber('noticeSettings', 'interval')) {
-            noticeInterval = $.getIniDbNumber('noticeSettings', 'interval');
-            clearInterval(interval);
-            interval = setInterval(function() {
-                if (noticeToggle && $.bot.isModuleEnabled('./systems/noticeSystem.js') && numberOfNotices > 0) {
-                    if (noticeReqMessages < 0 || messageCount >= noticeReqMessages) {
-                        if ((noticeOffline && !$.isOnline($.channelName)) || $.isOnline($.channelName)) {
-                            sendNotice();
-                            messageCount = 0;
-                        }
-                    }
-                }
-            }, noticeInterval * 6e4);
-        }
+        noticeInterval = $.getIniDbNumber('noticeSettings', 'interval');
     };
 
     /**
      * @event ircChannelMessage
      */
-    $.bind('ircChannelMessage', function() {
+    $.bind('ircChannelMessage', function(event) {
         messageCount++;
     });
 
@@ -137,7 +158,7 @@
                     $.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-error-notice-404'));
                     return;
                 } else {
-                    argsString = argsString.replace(action + ' ' + args[1], '').trim();
+                    argsString = args.slice(2).join(' ');
                     $.inidb.set('notices', 'message_' + args[1], argsString);
                     $.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-edit-success'));
                     return;
@@ -155,7 +176,7 @@
                     //$.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-error-notice-404'));
                     return;
                 } else {
-                    argsString = argsString.replace(action + ' ' + args[1], '').trim();
+                    argsString = args.slice(2).join(' ');
                     $.inidb.set('notices', 'message_' + args[1], argsString);
                     //$.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-edit-success'));
                     return;
@@ -209,7 +230,7 @@
                     $.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-add-usage'));
                     return;
                 } else {
-                    argsString = argsString.replace(action + '', '').trim();
+                    argsString = args.slice(1).join(' ');
                     $.inidb.set('notices', 'message_' + numberOfNotices, argsString);
                     numberOfNotices++;
                     $.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-add-success'));
@@ -225,7 +246,7 @@
                     //$.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-add-usage'));
                     return;
                 } else {
-                    argsString = argsString.replace(action + '', '').trim();
+                    argsString = args.slice(1).join(' ');
                     $.inidb.set('notices', 'message_' + numberOfNotices, argsString);
                     numberOfNotices++;
                     //$.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-add-success'));
@@ -259,7 +280,7 @@
                 if (args.length < 2) {
                     $.say($.whisperPrefix(sender) + $.lang.get('noticehandler.notice-req-usage'));
                     return;
-                } 
+                }
 
                 $.inidb.set('noticeSettings', 'reqmessages', args[1]);
                 noticeReqMessages = parseInt(args[1]);
@@ -310,22 +331,21 @@
     // Set the interval to announce
     interval = setInterval(function() {
         if (noticeToggle && $.bot.isModuleEnabled('./systems/noticeSystem.js') && numberOfNotices > 0) {
-            if (noticeReqMessages < 0 || messageCount >= noticeReqMessages) {
+            if ((noticeReqMessages < 0 || messageCount >= noticeReqMessages) && (lastNoticeSent + (noticeInterval * 6e4)) <= $.systemTime()) {
                 if ((noticeOffline && !$.isOnline($.channelName)) || $.isOnline($.channelName)) {
                     sendNotice();
                     messageCount = 0;
+                    lastNoticeSent = $.systemTime();
                 }
             }
         }
-    }, noticeInterval * 6e4);
+    }, 1e4, 'scripts::handlers::noticeSystem.js');
 
     /**
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./systems/noticeSystem.js')) {
-            $.registerChatCommand('./systems/noticeSystem.js', 'notice', 1);
-        }
+        $.registerChatCommand('./systems/noticeSystem.js', 'notice', 1);
     });
 
     $.reloadNoticeSettings = reloadNoticeSettings;

@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2016-2018 phantombot.tv
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 /**
  * slotMachine.js
  *
@@ -19,7 +36,7 @@
     $.getSetIniDbString('slotmachineemotes', 'emote_1', 'KappaPride');
     $.getSetIniDbString('slotmachineemotes', 'emote_2', 'BloodTrail');
     $.getSetIniDbString('slotmachineemotes', 'emote_3', 'ResidentSleeper');
-    $.getSetIniDbString('slotmachineemotes', 'emote_4', 'deIlluminati');
+    $.getSetIniDbString('slotmachineemotes', 'emote_4', '4Head');
 
     /**
      * @function loadEmotes
@@ -31,7 +48,7 @@
         emoteList[3] = $.getIniDbString('slotmachineemotes', 'emote_3');
         emoteList[4] = $.getIniDbString('slotmachineemotes', 'emote_4');
     };
-        
+
     /**
      * @function loadPrizes
      */
@@ -80,19 +97,19 @@
         loadPrizes();
 
         if (e1 == e2 && e2 == e3) {
-            message += $.lang.get('slotmachine.result.win', $.getPointsString(prizes[e1]));
-            $.say(message + $.gameMessages.getWin(sender));
+            message += $.lang.get('slotmachine.result.win', ($.getPointsString(prizes[e1]) + '.'));
+            $.say(message + $.gameMessages.getWin(sender, 'slot'));
             $.inidb.incr('points', sender, prizes[e1]);
             return;
         }
-        
+
         if (e1 == e2 || e2 == e3 || e3 == e1) {
-            message += $.lang.get('slotmachine.result.win', $.getPointsString(Math.floor(prizes[Math.min(e1, e2, e3)] / 3)));
-            $.say(message + $.gameMessages.getWin(sender));
-            $.inidb.incr('points', sender, Math.floor(prizes[Math.min(e1, e2, e3)] / 3));
+            message += $.lang.get('slotmachine.result.win', (e1 == e2 ? $.getPointsString(Math.floor(prizes[e1] * 0.3)) : $.getPointsString(Math.floor(prizes[e3] * 0.3))) + '.');
+            $.say(message + $.gameMessages.getWin(sender, 'slot'));
+            $.inidb.incr('points', sender, (e1 == e2 ? (Math.floor(prizes[e1] * 0.3)) : (Math.floor(prizes[e3] * 0.3))));
             return;
         }
-        $.say(message + $.gameMessages.getLose(sender));
+        $.say(message + $.gameMessages.getLose(sender, 'slot'));
     };
 
     /**
@@ -137,13 +154,7 @@
                  * @commandpath slot emotes [emote1] [emote2] [emote3] [emote4] [emote5] - Set the emotes for the slots.
                  */
                 if (args[0].equalsIgnoreCase('emotes')) {
-                    if (args.length != 6) {
-                        loadEmotes();
-                        $.say($.whisperPrefix(sender) + $.lang.get('slotmachine.emote.usage', emoteList.join(' ')));
-                        return;
-                    }
-
-                    if (isNaN(args[1]) || isNaN(args[2]) || isNaN(args[3]) || isNaN(args[4]) || isNaN(args[5])) {
+                    if (args.length < 6) {
                         loadEmotes();
                         $.say($.whisperPrefix(sender) + $.lang.get('slotmachine.emote.usage', emoteList.join(' ')));
                         return;
@@ -168,19 +179,10 @@
      * @event initReady
      */
     $.bind('initReady', function() {
-        if ($.bot.isModuleEnabled('./games/slotMachine.js')) {
-            $.registerChatCommand('./games/slotMachine.js', 'slot', 7);
-            $.registerChatSubcommand('slot', 'rewards', 1);
-            $.registerChatSubcommand('slot', 'emotes', 1);
-        }
+        $.registerChatCommand('./games/slotMachine.js', 'slot', 7);
+        $.registerChatSubcommand('slot', 'rewards', 1);
+        $.registerChatSubcommand('slot', 'emotes', 1);
     });
-
-    /**
-     * Warn the user if the points system is disabled and this is enabled.
-     */
-    if ($.bot.isModuleEnabled('./games/slotMachine.js') && !$.bot.isModuleEnabled('./systems/pointSystem.js')) {
-        $.log.error("Disabled. ./systems/pointSystem.js is not enabled.");
-    }
 
     $.loadPrizesSlot = loadPrizes;
 })();

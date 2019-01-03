@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/* 
+/*
  * @author IllusionaryOne
  */
 
@@ -41,13 +41,13 @@
         settingIcon = [];
         gameTitle = '__not_loaded__';
 
-        modeIcon['false'] = "<i style=\"color: #6136b1\" class=\"fa fa-circle-o\" />";
-        modeIcon['true'] = "<i style=\"color: #6136b1\" class=\"fa fa-circle\" />";
+        modeIcon['false'] = "<i style=\"color: var(--main-color)\" class=\"fa fa-circle-o\" />";
+        modeIcon['true'] = "<i style=\"color: var(--main-color)\" class=\"fa fa-circle\" />";
 
         settingIcon['false'] = "<i class=\"fa fa-circle-o\" />";
         settingIcon['true'] = "<i class=\"fa fa-circle\" />";
 
-        var spinIcon = '<i style="color: #6136b1" class="fa fa-spinner fa-spin" />';
+        var spinIcon = '<i style="color: var(--main-color)" class="fa fa-spinner fa-spin" />';
 
     /*
      * @function onMessage
@@ -78,7 +78,8 @@
 
             if (panelCheckQuery(msgObject, 'dashboard_modules')) {
                 var html = "<table>",
-                    moduleData = msgObject['results'];
+                    discordHtml = "<table>",
+                    moduleData = msgObject['results'],
                     module = "",
                     moduleEnabled = "";
 
@@ -89,29 +90,53 @@
                     module = moduleData[idx]['key'];
                     moduleEnabled = moduleData[idx]['value'];
                     if (module.indexOf('/core/') === -1 && module.indexOf('/lang/') === -1) {
-                        html += "<tr class=\"textList\">" +
-                                "    <td>" + module + "</td>" +
+                        if (module.indexOf('./discord') === -1) {
+                            html += "<tr class=\"textList\">" +
+                                    "    <td>" + module + "</td>" +
 
-                                "    <td style=\"width: 25px\">" +
-                                "        <div id=\"moduleStatus_" + idx + "\">" + modeIcon[moduleEnabled] + "</div>" +
-                                "    </td>" +
+                                    "    <td style=\"width: 25px\">" +
+                                    "        <div id=\"moduleStatus_" + idx + "\">" + modeIcon[moduleEnabled] + "</div>" +
+                                    "    </td>" +
 
-                                "    <td style=\"width: 25px\">" +
-                                "        <div data-toggle=\"tooltip\" title=\"Enable\" class=\"button\"" +
-                                "             onclick=\"$.enableModule('" + module + "', " + idx + ")\">" + settingIcon['true'] +
-                                "        </div>" +
-                                "    </td>" +
+                                    "    <td style=\"width: 25px\">" +
+                                    "        <div data-toggle=\"tooltip\" title=\"Enable\" class=\"button\"" +
+                                    "             onclick=\"$.enableModule('" + module + "', " + idx + ")\">" + settingIcon['true'] +
+                                    "        </div>" +
+                                    "    </td>" +
 
-                                "    <td style=\"width: 25px\">" +
-                                "        <div data-toggle=\"tooltip\" title=\"Disable\" class=\"button\"" +
-                                "             onclick=\"$.disableModule('" + module + "', " + idx + ")\">" + settingIcon['false'] +
-                                "        </div>" +
-                                "    </td>" +
-                                "</tr>";
+                                    "    <td style=\"width: 25px\">" +
+                                    "        <div data-toggle=\"tooltip\" title=\"Disable\" class=\"button\"" +
+                                    "             onclick=\"$.disableModule('" + module + "', " + idx + ")\">" + settingIcon['false'] +
+                                    "        </div>" +
+                                    "    </td>" +
+                                    "</tr>";
+                        } else {
+                            discordHtml += "<tr class=\"textList\">" +
+                                    "    <td>" + module + "</td>" +
+
+                                    "    <td style=\"width: 25px\">" +
+                                    "        <div id=\"moduleStatus_" + idx + "\">" + modeIcon[moduleEnabled] + "</div>" +
+                                    "    </td>" +
+
+                                    "    <td style=\"width: 25px\">" +
+                                    "        <div data-toggle=\"tooltip\" title=\"Enable\" class=\"button\"" +
+                                    "             onclick=\"$.enableModule('" + module + "', " + idx + ")\">" + settingIcon['true'] +
+                                    "        </div>" +
+                                    "    </td>" +
+
+                                    "    <td style=\"width: 25px\">" +
+                                    "        <div data-toggle=\"tooltip\" title=\"Disable\" class=\"button\"" +
+                                    "             onclick=\"$.disableModule('" + module + "', " + idx + ")\">" + settingIcon['false'] +
+                                    "        </div>" +
+                                    "    </td>" +
+                                    "</tr>";
+                        }
                     }
                 }
                 html += "</table>";
+                discordHtml += "</table>";
                 $("#modulesList").html(html);
+                $("#discordModulesList").html(discordHtml);
                 $('[data-toggle="tooltip"]').tooltip({ trigger: 'hover' });
             }
 
@@ -189,11 +214,20 @@
                 }
             }
 
+            if (panelCheckQuery(msgObject, 'dashboard_gameCommunity')) {
+                if (msgObject['results']['communities'] !== undefined) {
+                    var arr = msgObject['results']['communities'].split(', ');
+                    for (var i = 0; i < 3; i++) {
+                        $('#stream-community-' + (i + 1)).val((arr[i] === undefined ? '' : arr[i]));
+                    }
+                }
+            }
+
             if (panelCheckQuery(msgObject, 'dashboard_streamlastfollow')) {
                 if (msgObject['results']['lastFollow'] == null) {
                     $("#lastFollow").html("");
                 } else {
-                    $("#lastFollow").html("<spam class=\"purplePill\">Latest Follow: " + msgObject['results']['lastFollow'] + "</spam>");
+                    $("#lastFollow").html("<span class=\"purplePill\" data-toggle=\"tooltip\" title=\"Latest Follower\">Follow: " + msgObject['results']['lastFollow'] + "</span>");
                 }
             }
 
@@ -201,7 +235,7 @@
                 if (msgObject['results']['lastReSub'] == null) {
                     $("#lastReSub").html("");
                 } else {
-                    $("#lastReSub").html("<spam class=\"purplePill\">Latest ReSub: " + msgObject['results']['lastReSub'] + "</spam>");
+                    $("#lastReSub").html("<span class=\"purplePill\" data-toggle=\"tooltip\" title=\"Latest Re-Subscriber\">ReSub: " + msgObject['results']['lastReSub'] + "</span>");
                 }
             }
 
@@ -209,7 +243,7 @@
                 if (msgObject['results']['lastSub'] == null) {
                     $("#lastSub").html("");
                 } else {
-                    $("#lastSub").html("<spam class=\"purplePill\">Latest Sub: " + msgObject['results']['lastSub'] + "</spam>");
+                    $("#lastSub").html("<span class=\"purplePill\" data-toggle=\"tooltip\" title=\"Latest Subscriber\">Sub: " + msgObject['results']['lastSub'] + "</span>");
                 }
             }
 
@@ -217,20 +251,20 @@
                 if (msgObject['results']['lastDonator'] == null) {
                     $("#lastDonator").html("");
                 } else {
-                    $("#lastDonator").html("<spam class=\"purplePill\">Latest Donator: " + msgObject['results']['lastDonator'] + "</spam>");
+                    $("#lastDonator").html("<span class=\"purplePill\" data-toggle=\"tooltip\" title=\"Latest Donator\">Donator: " + msgObject['results']['lastDonator'] + "</span>");
                 }
             }
- 
+
             if (panelCheckQuery(msgObject, 'dashboard_gameTitle')) {
                 gameTitle = msgObject['results']['game'];
                 if (gameTitle === undefined || gameTitle === null) {
-                    gameTitle = "Game";
+                    gameTitle = "Some Game";
                 }
 
                 $('#gameTitleInput').val(gameTitle);
                 sendDBQuery("dashboard_deathctr", "deaths", gameTitle);
             }
- 
+
             if (panelCheckQuery(msgObject, 'dashboard_loggingModeEvent')) {
                 loggingModeEvent = msgObject['results']['log.event'];
                 $("#logEvent").html(modeIcon[loggingModeEvent]);
@@ -248,8 +282,9 @@
 
             if (panelCheckQuery(msgObject, 'dashboard_deathctr')) {
                 amount = msgObject['results'][gameTitle];
-                if (gameTitle === undefined || gameTitle === null || amount === null || amount === undefined) {
-                    $("#deathCounterValue").html(msgObject['results'][gameTitle]);
+                if (gameTitle == null || amount == null) {
+                    $("#deathCounterValue").html('0');
+                    return;
                 }
                 $("#deathCounterValue").html(msgObject['results'][gameTitle]);
             }
@@ -281,23 +316,6 @@
             if (panelCheckQuery(msgObject, 'dashboard_logRotate')) {
                 $('#logRotateInput').val(msgObject['results']['log_rotate_days']);
             }
-
-            if (panelCheckQuery(msgObject, 'dashboard_queuelist')) {
-                var queueList = msgObject['results'],
-                    html = "",
-                    username = "";
-
-                html = "<table>";
-                for (var idx = 0; idx < queueList.length; idx++) {
-                    username = queueList[idx]['key'];
-                    html += "<tr class=\"textList\">" +
-                            "    <td style=\"vertical-align: middle; width: 50%\">" + username + "</td>" +
-                            "    <td style=\"vertical-align: middle width: 25%\">" +
-                            "</tr>";
-                }
-                html += "</table>";
-                $("#queueList").html(html);
-            }
         }
     }
 
@@ -311,6 +329,7 @@
         sendDBQuery("dashboard_streamlastsub", "streamInfo", "lastSub");
         sendDBQuery("dashboard_streamlastdonator", "streamInfo", "lastDonator");
         sendDBQuery("dashboard_gameTitle", "streamInfo", "game");
+        sendDBQuery("dashboard_gameCommunity", "streamInfo", "communities");
         sendDBQuery("dashboard_loggingModeEvent", "settings", "log.event");
         sendDBQuery("dashboard_loggingModeFile", "settings", "log.file");
         sendDBQuery("dashboard_loggingModeErr", "settings", "log.error");
@@ -321,13 +340,38 @@
         sendDBQuery("dashboard_deathctr", "deaths", gameTitle);
         sendDBKeys("dashboard_highlights", "highlights");
         sendDBKeys("dashboard_modules", "modules");
-        sendDBKeys("dashboard_queuelist", "queueList");
 
         if (!panelStatsEnabled) {
             sendDBQuery("dashboard_panelStatsEnabled", "panelstats", "enabled");
         } else {
             sendDBKeys("dashboard_chatCount", "panelchatstats");
             sendDBKeys("dashboard_modCount", "panelmodstats");
+        }
+
+        // New panel alert.
+        if (localStorage.getItem('_phantombot_new_panel_alert') !== 'true') {
+            $('#new-panel-alert').html($('<div/>', {
+                'class': 'alert alert-warning'
+            }).append($('<a/>', {
+                'class': 'close',
+                'data-dismiss': 'alert',
+                'style': 'color: black;',
+                'html': '&times;',
+                'href': 'javascript:void(0)',
+                'click': function() {
+                    localStorage.setItem('_phantombot_new_panel_alert', 'true');
+                }
+            })).append($('<strong/>', {
+                'text': 'New Panel Beta! '
+            })).append($('<p/>', {
+                'text': 'Want to test out our new modern, responsive, and prettier panel? Learn more by ',
+                'style': 'display: inline;'
+            })).append($('<a/>', {
+                'html': 'clicking here.',
+                'href': 'https://blog.phantombot.tv/tag/beta-features/',
+                'target': '_blank',
+                'style': 'color: #6441a5;'
+            })));
         }
     }
 
@@ -351,7 +395,7 @@
         if (panelMatch(gameTitle, '__not_loaded__')) {
             return;
         }
-        $('#deathCounterValue').html('<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />');
+        $('#deathCounterValue').html('<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />');
         sendCommand('deathctr ' + action);
         setTimeout(function() { sendDBQuery("dashboard_deathctr", "deaths", gameTitle); }, TIMEOUT_WAIT_TIME);
     }
@@ -363,12 +407,12 @@
         return panelStrcmp(a.key, b.key);
     }
 
-    /** 
+    /**
      * @function enableModule
      * @param {String} module
      */
     function enableModule(module, idx) {
-        $("#moduleStatus_" + idx).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#moduleStatus_" + idx).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendCommand("module enablesilent " + module);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     }
@@ -378,7 +422,7 @@
      * @param {String} module
      */
     function disableModule(module, idx) {
-        $("#moduleStatus_" + idx).html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#moduleStatus_" + idx).html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendCommand("module disablesilent " + module);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME);
     }
@@ -388,7 +432,7 @@
      * @param {String} mode
      */
     function toggleLog(type) {
-        $('#'+ type).html('<i style="color: #6136b1" class="fa fa-spinner fa-spin" />');
+        $('#'+ type).html('<i style="color: var(--main-color)" class="fa fa-spinner fa-spin" />');
         if (type == "logFile") {
             console.log(type)
             if (loggingModeFile == 'true') {
@@ -457,6 +501,27 @@
     }
 
     /**
+     * @function setCommunity
+     */
+    function setCommunity() {
+        var c = [];
+
+        if ($('#stream-community-1').val().length > 0) {
+            c.push($('#stream-community-1').val());
+        }
+
+        if ($('#stream-community-2').val().length > 0) {
+            c.push($('#stream-community-2').val());
+        }
+
+        if ($('#stream-community-3').val().length > 0) {
+            c.push($('#stream-community-3').val());
+        }
+
+        sendCommand('setcommunitysilent ' + c.join(', '));
+    }
+
+    /**
      * @function chatReconnect
      */
     function chatReconnect() {
@@ -474,7 +539,7 @@
      * @function setHighlight
      */
     function setHighlight() {
-        $("#showHighlights").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#showHighlights").html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendCommand("highlightpanel " + $("#highlightInput").val());
         $("#highlightInput").val('');
         setTimeout(function() { sendDBKeys("dashboard_highlights", "highlights"); }, TIMEOUT_WAIT_TIME);
@@ -484,7 +549,7 @@
      * @function clearHighlights
      */
     function clearHighlights() {
-        $("#showHighlightspanel").html("<i style=\"color: #6136b1\" class=\"fa fa-spinner fa-spin\" />");
+        $("#showHighlightspanel").html("<i style=\"color: var(--main-color)\" class=\"fa fa-spinner fa-spin\" />");
         sendCommand("clearhighlights");
         setTimeout(function() { sendDBKeys("dashboard_highlights", "highlights"); }, TIMEOUT_WAIT_TIME);
     }
@@ -495,14 +560,14 @@
     function setMultiLink(tagId, tableKey) {
         var newValue = $(tagId).val();
         if (newValue.length > 0) {
-            sendDBUpdate('multiLinkInput', 'dualStreamCommand', tableKey, '/' + newValue.replace(/\s+/g, '/'));
+            sendDBUpdate('multiLinkInput', 'dualStreamCommand', tableKey, newValue.replace(/\s+/g, '/'));
             $(tagId).val('')
             $(tagId).attr("placeholder", newValue).blur();
             setTimeout(function() { sendCommand("reloadmulti"); }, TIMEOUT_WAIT_TIME);
             setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
         }
     }
-    
+
     /**
      * @function setMultiLinkTimer
      */
@@ -540,7 +605,7 @@
         setTimeout(function() { sendCommand("reloadmulti"); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
     }
- 
+
     /**
      * @function multiLinkTimerOn
      */
@@ -551,7 +616,7 @@
         setTimeout(function() { sendCommand("reloadmulti"); }, TIMEOUT_WAIT_TIME);
         setTimeout(function() { doQuery(); }, TIMEOUT_WAIT_TIME * 2);
     }
- 
+
     /**
      * @function multiLinkTimerOff
      */
@@ -578,8 +643,16 @@
     function toggleTwitchChat() {
         if ($("#chatsidebar").is(":visible")) {
             $("#chatsidebar").fadeOut(1000);
+            localStorage.setItem('phantombot_chattoggle', 'false');
         } else {
             $("#chatsidebar").fadeIn(1000);
+            // Load the iframe if it isn't there.
+            if ($("#chatsidebar").html().indexOf(getChannelName().toLowerCase()) === -1) {
+                $("#chatsidebar").append("<iframe id=\"chat\" frameborder=\"0\" scrolling=\"no\" onload=\"hideLoadingImage()\"" +
+                                             "src=\"https://www.twitch.tv/embed/" + getChannelName().toLowerCase() + "/chat\">");
+                $("#chatsidebar").draggable({ iframeFix: true });
+            }
+            localStorage.setItem('phantombot_chattoggle', 'true');
         }
     }
 
@@ -614,7 +687,7 @@
         }
         $('#amountQueue').val('');
     }
- 
+
     // Import the HTML file for this panel.
     $("#dashboardPanel").load("/panel/dashboard.html");
 
@@ -664,4 +737,5 @@
     $.queueCMD = queueCMD;
     $.queueCMDNext = queueCMDNext;
     $.setLogRotate = setLogRotate;
+    $.setCommunity = setCommunity;
 })();

@@ -1,7 +1,7 @@
 /* astyle --style=java --indent=spaces=4 */
 
 /*
- * Copyright (C) 2016 phantombot.tv
+ * Copyright (C) 2016-2018 phantombot.tv
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,20 +18,12 @@
  */
 package com.illusionaryone;
 
-import com.gmt2001.UncaughtExceptionHandler;
-
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.BufferedOutputStream;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
-
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.IOException;
 
 import java.net.URL;
 
@@ -41,7 +33,44 @@ import java.net.URL;
  * @author illusionaryone
  */
 public class ImgDownload {
+    
+    /*
+     * Download an image from a HTTP URL.
+     *
+     * @param   String  HTTP URL to download from.
+     * @param   String  The filename to save the remote image as.
+     * @return  String  Returns 'true' or 'false'.  As Rhino does not like Boolean, this is a String.
+     */
+    public static String downloadHTTPTo(String urlString, String location) {
+        try {
+            URL url = new URL(urlString);
+            ByteArrayOutputStream outputStream;
+            try (InputStream inputStream = new BufferedInputStream(url.openStream())) {
+                outputStream = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int n = 0;
+                while ((n = inputStream.read(buffer)) != -1) {
+                    outputStream.write(buffer, 0, n);
+                }
+                outputStream.close();
+            }
+            byte[] imgData = outputStream.toByteArray();
 
+            if (!new File (location.substring(0, location.lastIndexOf("/"))).exists()) {
+                new File (location.substring(0, location.lastIndexOf("/"))).mkdirs();
+            }
+
+            try (FileOutputStream fileOutputStream = new FileOutputStream(location)) {
+                fileOutputStream.write(imgData);
+            }
+            return new String("true");
+        } catch (IOException ex) {
+            com.gmt2001.Console.err.println("ImgDownload::downloadHTTP(" + urlString + ", " + location + ") failed: " +
+                                            ex.getMessage());
+            return new String("false");
+        }
+    }
+    
     /*
      * Download an image from a HTTP URL.
      *
@@ -50,33 +79,6 @@ public class ImgDownload {
      * @return  String  Returns 'true' or 'false'.  As Rhino does not like Boolean, this is a String.
      */
     public static String downloadHTTP(String urlString, String filename) {
-        try {
-            URL url = new URL(urlString);
-            InputStream inputStream = new BufferedInputStream(url.openStream());
-            ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-    
-            byte[] buffer = new byte[1024];
-            int n = 0;
-    
-            while ((n = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, n);
-            }
-            outputStream.close();
-            inputStream.close();
-            byte[] imgData = outputStream.toByteArray();
-    
-            if (!new File ("./addons/downloadHTTP").exists()) {
-                new File ("./addons/downloadHTTP").mkdirs();
-            }
-
-            FileOutputStream fileOutputStream = new FileOutputStream("./addons/downloadHTTP/" + filename);
-            fileOutputStream.write(imgData);
-            fileOutputStream.close();
-            return new String("true");
-        } catch (Exception ex) {
-            com.gmt2001.Console.err.println("ImgDownload::downloadHTTP(" + urlString + ", " + filename + ") failed: " +
-                                            ex.getMessage());
-            return new String("false");
-        }
+        return downloadHTTPTo(urlString, "./addons/downloadHTTP/" + filename);
     }
 }
